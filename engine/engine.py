@@ -32,4 +32,4 @@ class Engine:
 
             renderer.render()
             pygame.display.flip()
-            clock.tick()
+            clock.tick(config.FPS)

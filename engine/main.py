@@ -11,16 +11,29 @@ if __name__ == "__main__":
     shader = ShaderProgram(vertex_shader, fragment_shader)
     rotating_cube_logic = RotatingCubeLogic(shader)
 
+    # Cube vertices (positions + colors)
     vertices = np.array([
-        -0.5, -0.5, 0.0,  # Bottom-left
-        0.5, -0.5, 0.0,  # Bottom-right
-        0.5, 0.5, 0.0,  # Top-right
-        -0.5, 0.5, 0.0  # Top-left
+        # Front Face
+        -0.5, -0.5, 0.5, 1, 0, 0,  # Bottom-left (red)
+        0.5, -0.5, 0.5, 0, 1, 0,  # Bottom-right (green)
+        0.5, 0.5, 0.5, 0, 0, 1,  # Top-right (blue)
+        -0.5, 0.5, 0.5, 1, 1, 0,  # Top-left (yellow)
+
+        # Back Face
+        -0.5, -0.5, -0.5, 1, 0, 1,
+        0.5, -0.5, -0.5, 0, 1, 1,
+        0.5, 0.5, -0.5, 1, 1, 1,
+        -0.5, 0.5, -0.5, 0, 0, 0,
     ], dtype=np.float32)
 
+    # Indices for cube faces
     indices = np.array([
-        0, 1, 2,  # First triangle
-        2, 3, 0  # Second triangle
+        0, 1, 2, 2, 3, 0,  # Front
+        4, 5, 6, 6, 7, 4,  # Back
+        0, 3, 7, 7, 4, 0,  # Left
+        1, 5, 6, 6, 2, 1,  # Right
+        3, 2, 6, 6, 7, 3,  # Top
+        0, 1, 5, 5, 4, 0,  # Bottom
     ], dtype=np.uint32)
 
     mesh = Mesh(vertices, indices)
