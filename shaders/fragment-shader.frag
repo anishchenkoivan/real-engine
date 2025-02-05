@@ -5,6 +5,29 @@ uniform vec2 resolution;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
+#define INFTY (1.0 / 0.0)
+
+#define COLOR_RED   0
+#define COLOR_GREEN 1
+#define COLOR_BLUE  2
+#define COLOR_GREY  3
+
+struct Ray {
+    vec3 start;
+    vec3 dir;
+    int color;
+};
+
+struct Sphere {
+    vec3 centre;
+    float radius;
+};
+
+struct Reflection {
+    Ray ray;
+    float dist;
+};
+
 vec3 reflect(vec3 v, vec3 axis) {
     axis = normalize(axis);
     vec3 proj = dot(v, axis) * axis;
@@ -13,29 +36,29 @@ vec3 reflect(vec3 v, vec3 axis) {
 }
 
 bool isBlackSquare(float x) {
-    return int((x + 0.5) * 15) % 2 == 0;
+    return int((x + 0.5) * 55) % 2 == 0;
 }
 
-vec2 castRayWithSky(vec3 start, vec3 dir) {
-    if (dir.y > -0.1) {
-      return vec2(0.0, 0.0);
+float castRayWithSky(Ray ray) {
+    if (ray.dir.y > -0.1) {
+        return 0.0;
     }
-    dir = normalize(dir);
-    if (isBlackSquare(dir.x) ^^ isBlackSquare(dir.y)) {
-        return vec2(1.0, 0.0);
+    ray.dir = normalize(ray.dir);
+    if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
+        return 1.0;
     }
-    return vec2(0.1, 0.0);
+    return 0.3;
 }
 
-vec2 castRayWithSphere(vec3 O, vec3 D, vec3 C, float R) {
-    vec3 OC = O - C;
-    float k1 = dot(D, D);
-    float k2 = 2 * dot(OC, D);
-    float k3 = dot(OC, OC) - R * R;
+Reflection castRayWithSphere(Ray ray, Sphere sph) {
+    vec3 OC = ray.start - sph.centre;
+    float k1 = dot(ray.dir, ray.dir);
+    float k2 = 2 * dot(OC, ray.dir);
+    float k3 = dot(OC, OC) - sph.radius * sph.radius;
     float discr = k2 * k2 - 4 * k1 * k3;
 
     if (discr <= 0) {
-        return castRayWithSky(O, D);
+        return Reflection(ray, INFTY);
     }
 
     discr = sqrt(discr);
@@ -43,24 +66,32 @@ vec2 castRayWithSphere(vec3 O, vec3 D, vec3 C, float R) {
     float t1 = (-k2 - discr) / (2 * k1);
     float t2 = (-k2 + discr) / (2 * k1);
 
-    vec3 intersection = O + D * t2;
-    vec3 rvector = intersection - C;
-    vec3 reflection = reflect(D, rvector);
-    // return vec2(reflection.x * 0.25 + (reflection.y + 0.45) * 0.75, 1);
-    // return vec2(0.5, 0.0);
-    return castRayWithSky(intersection, reflection) * 0.5 + 0.5;
+    vec3 intersection = ray.start + ray.dir * t2;
+    vec3 rvector = intersection - sph.centre;
+    vec3 refvector = reflect(ray.dir, rvector);
+    return Reflection(Ray(intersection, refvector, ray.color), t2);
 }
 
-vec4 castRay(vec3 start, vec3 dir) {
-    vec2 cst = castRayWithSphere(start, dir, vec3(0.0, 0.0, 10.0), 1.0);
-    return vec4(cst.x, cst.x, cst.x, 1.0);
+vec4 castRay(Ray ray) {
+    Sphere sph = Sphere(vec3(0.0, 0.0, 10.0), 0.5);
+    Reflection refl = castRayWithSphere(ray, sph);
+    ray = refl.ray;
+
+    float brightness;
+    if (refl.dist == INFTY) {
+        brightness = castRayWithSky(ray);
+    } else {
+        brightness = castRayWithSky(ray) * 0.5 + 0.5;
+    }
+    return vec4(brightness, brightness, brightness, 1.0);
 }
 
 void main() {
     fragCoord -= resolution / 2;
     float d = max(resolution.x, resolution.y);
     vec2 uv = fragCoord / d;
-    vec3 start = vec3(0.0, 0.0, -1.0);
-    vec3 dir = vec3(uv, 1.0);
-    color = castRay(start, dir);
+    vec3 camera = vec3(0.0, 0.0, -1.0);
+    vec3 dir = normalize(vec3(uv, 0.0) - camera);
+    Ray ray = Ray(camera, dir, COLOR_GREY);
+    color = castRay(ray);
 }
