@@ -7,12 +7,12 @@ import os
 
 
 class Engine:
-    def __init__(self, resolution=(1920, 1080)):
-        self.resolution = resolution
+    def __init__(self):
+        self.resolution = config.RESOLUTION
         if platform.system() == "Linux":
             os.environ["SDL_VIDEO_X11_FORCE_EGL"] = "1"
         pygame.init()
-        pygame.display.set_mode((800, 600), DOUBLEBUF | OPENGL)
+        pygame.display.set_mode(config.RESOLUTION, DOUBLEBUF | OPENGL)
         pygame.display.set_caption('Real Engine')
         icon = pygame.image.load(config.ICON_PATH)
         pygame.display.set_icon(icon)

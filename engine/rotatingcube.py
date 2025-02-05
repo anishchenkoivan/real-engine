@@ -8,7 +8,7 @@ class RotatingCubeLogic(LogicProvider):
         super().__init__()
         self.shader = shader
 
-        self.projection = glm.perspective(glm.radians(45), 800 / 600, 0.1, 10.0)
+        self.projection = glm.perspective(glm.radians(45), 1920 / 1080, 0.1, 10.0)
         self.view = glm.translate(glm.mat4(1), glm.vec3(0, 0, -3))
         self.angle = 0
 

@@ -1,4 +1,5 @@
 import OpenGL.GL.shaders
+import numpy as np
 from OpenGL.GL import *
 import ctypes
 
@@ -27,42 +28,28 @@ class ShaderProgram:
 
 
 class Mesh:
-    def __init__(self, vertices, indices):
+    def __init__(self, attribute: np.array):
         self.VAO = glGenVertexArrays(1)
         self.VBO = glGenBuffers(1)
         self.EBO = glGenBuffers(1)
-        self.vertices = vertices
-        self.indices = indices
+        self.attribute = attribute
+        glBindVertexArray(self.VAO)
         self.setup_vao()
 
     def setup_vao(self):
-        glBindVertexArray(self.VAO)
-
-        glBindBuffer(GL_ARRAY_BUFFER, self.VBO)
-        glBufferData(GL_ARRAY_BUFFER, self.vertices.nbytes, self.vertices, GL_STATIC_DRAW)
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.EBO)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.indices.nbytes, self.indices, GL_STATIC_DRAW)
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), ctypes.c_void_p(0))
-        glEnableVertexAttribArray(0)
-
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), ctypes.c_void_p(3 * sizeof(GLfloat)))
-        glEnableVertexAttribArray(1)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
-
-        glEnable(GL_DEPTH_TEST)
-
-    def bind_vao(self):
-        glBindVertexArray(self.VAO)
-
-    def unbind_vao(self):
-        glBindVertexArray(0)
+        pass
 
     def draw(self):
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, None)
+        pass
+
+
+class MeshGroup:
+    def __init__(self, *meshes: Mesh):
+        self.meshes = meshes
+
+    def draw(self):
+        for mesh in self.meshes:
+            mesh.draw()
 
 
 class LogicProvider:
@@ -74,7 +61,7 @@ class LogicProvider:
 
 
 class Renderer:
-    def __init__(self, shader_program, mesh, logic_provider=None):
+    def __init__(self, shader_program: ShaderProgram, mesh: MeshGroup, logic_provider=None):
         self.shader = shader_program
         self.mesh = mesh
         self.logic_provider = logic_provider
@@ -82,7 +69,5 @@ class Renderer:
     def render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.shader.use()
-        self.mesh.bind_vao()
         self.logic_provider.render()
         self.mesh.draw()
-        self.mesh.unbind_vao()
