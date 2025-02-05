@@ -12,8 +12,16 @@ vec3 reflect(vec3 v, vec3 axis) {
     return v - 2 * diff;
 }
 
+bool isBlackSquare(float x) {
+    return int((x + 0.5) * 10) % 2 == 0;
+}
+
 vec2 castRayWithSky(vec3 start, vec3 dir) {
-    return vec2((dir.x + 3 * dir.y + 2 * dir.z) / 6, 1.0 / 0.0);
+    dir = normalize(dir);
+    if (isBlackSquare(dir.x) ^^ isBlackSquare(dir.y)) {
+        return vec2(1.0, 0.0);
+    }
+    return vec2(0.1, 0.0);
 }
 
 vec2 castRayWithSphere(vec3 O, vec3 D, vec3 C, float R) {
@@ -32,9 +40,11 @@ vec2 castRayWithSphere(vec3 O, vec3 D, vec3 C, float R) {
     float t1 = (-k2 - discr) / (2 * k1);
     float t2 = (-k2 + discr) / (2 * k1);
 
-    vec3 intersection = O + D * t1;
+    vec3 intersection = O + D * t2;
     vec3 rvector = intersection - O;
     vec3 reflection = reflect(D, rvector);
+    // return vec2(reflection.x * 0.25 + (reflection.y + 0.45) * 0.75, 1);
+    // return vec2(0.5, 0.0);
     return castRayWithSky(intersection, reflection) * 0.5 + 0.5;
 }
 
