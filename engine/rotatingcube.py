@@ -16,6 +16,6 @@ class RotatingCubeLogic(LogicProvider):
         self.angle += 1
         model = glm.rotate(glm.mat4(1), glm.radians(self.angle), glm.vec3(0, 1, 0))
 
-        glUniformMatrix4fv(glGetUniformLocation(self.shader, "model"), 1, GL_FALSE, glm.value_ptr(model))
-        glUniformMatrix4fv(glGetUniformLocation(self.shader, "projection"), 1, GL_FALSE, glm.value_ptr(self.projection))
-        glUniformMatrix4fv(glGetUniformLocation(self.shader, "view"), 1, GL_FALSE, glm.value_ptr(self.view))
+        glUniformMatrix4fv(glGetUniformLocation(self.shader.program, "model"), 1, GL_FALSE, glm.value_ptr(model))
+        glUniformMatrix4fv(glGetUniformLocation(self.shader.program, "projection"), 1, GL_FALSE, glm.value_ptr(self.projection))
+        glUniformMatrix4fv(glGetUniformLocation(self.shader.program, "view"), 1, GL_FALSE, glm.value_ptr(self.view))

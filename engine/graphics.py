@@ -22,7 +22,6 @@ class ShaderProgram:
         self.shaders = shaders
         self.program = OpenGL.GL.shaders.compileProgram(*[shader.shader for shader in shaders])
 
-
     def use(self):
         glUseProgram(self.program)
 

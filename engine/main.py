@@ -3,7 +3,9 @@ import engine
 from graphics import *
 from rotatingcube import RotatingCubeLogic
 
+
 if __name__ == "__main__":
+    engine = engine.Engine()
     vertex_shader = Shader("../shaders/vertex-shader.vert")
     fragment_shader = Shader("../shaders/fragment-shader.frag")
     shader = ShaderProgram(vertex_shader, fragment_shader)
@@ -23,5 +25,4 @@ if __name__ == "__main__":
 
     mesh = Mesh(vertices, indices)
     renderer = Renderer(shader, mesh, rotating_cube_logic)
-    engine = engine.Engine(renderer)
-    engine.run()
+    engine.run(renderer)
