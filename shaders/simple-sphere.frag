@@ -3,6 +3,7 @@ out vec4 color;
 
 uniform vec2 resolution;
 uniform mat3 rotationMatrix = mat3(1.0);
+uniform vec3 position = vec3(0.0, 0.0, -1.0);
 
 vec2 fragCoord = gl_FragCoord.xy;
 
@@ -45,11 +46,6 @@ struct Reflection {
     Ray ray;
     float dist;
 };
-
-vec3 reflect(vec3 v, vec3 axis) {
-    axis *= dot(axis, v);
-    return normalize(v - 2 * axis);
-}
 
 bool isBlackSquare(float x) {
     return int((x + 0.5) * 55) % 2 == 0;
@@ -183,9 +179,8 @@ void main() {
     fragCoord -= resolution / 2;
     float d = max(resolution.x, resolution.y);
     vec2 uv = fragCoord / d;
-    vec3 camera = vec3(0.0, 0.0, -1.0);
-    vec3 dir = normalize(vec3(uv, 0.0) - camera);
+    vec3 camera = position;
+    vec3 dir = normalize(vec3(uv, 1.0));
     dir = rotationMatrix * dir;
     color = getColor(camera, dir);
-    // color = vec4(dir, 1.0);
 }

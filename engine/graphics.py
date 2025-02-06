@@ -1,6 +1,8 @@
 import OpenGL.GL.shaders
 import numpy as np
+import pygame
 from OpenGL.GL import *
+from pygame.event import Event
 from pyglm import glm
 
 class Shader:
@@ -73,14 +75,16 @@ class Renderer:
         self.mesh.draw()
 
 
-class MouseEventHandler:
-    def __init__(self, sensitivity, shader):
-        self.sensitivity = sensitivity
+class MovementEventHandler:
+    def __init__(self, shader, mouse_sensitivity, keyboard_sensitivity):
+        self.sensitivity = mouse_sensitivity
         self.shader = shader
         self.rotation_quat = glm.quat(1, 0, 0, 0)
 
+        self.keyboard_sensitivity = keyboard_sensitivity
+        self.position_vec = glm.vec3(0, 0, -1)
 
-    def handle_event(self, movement):
+    def handle_mouse_event(self, movement):
         yaw, pitch = movement
         yaw *= self.sensitivity
         pitch *= self.sensitivity
@@ -95,3 +99,23 @@ class MouseEventHandler:
 
         rotation_matrix = glm.mat3_cast(self.rotation_quat)
         glUniformMatrix3fv(glGetUniformLocation(self.shader.program, "rotationMatrix"), 1, GL_FALSE, glm.value_ptr(rotation_matrix))
+
+    def handle_keydown_event(self, event: Event):
+        forward = glm.normalize(self.rotation_quat * glm.vec3(0, 0, 1))
+        right = glm.normalize(self.rotation_quat * glm.vec3(1, 0, 0))
+        up = glm.vec3(0, 1, 0)
+
+        if event.key == pygame.K_w:
+            self.position_vec += forward * self.keyboard_sensitivity
+        elif event.key == pygame.K_s:
+            self.position_vec -= forward * self.keyboard_sensitivity
+        elif event.key == pygame.K_a:
+            self.position_vec -= right * self.keyboard_sensitivity
+        elif event.key == pygame.K_d:
+            self.position_vec += right * self.keyboard_sensitivity
+        elif event.key == pygame.K_SPACE:
+            self.position_vec += up * self.keyboard_sensitivity
+        elif event.key == pygame.K_LSHIFT:
+            self.position_vec -= up * self.keyboard_sensitivity
+
+        glUniform3fv(glGetUniformLocation(self.shader.program, "position"), 1, glm.value_ptr(self.position_vec))

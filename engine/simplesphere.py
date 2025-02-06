@@ -24,8 +24,8 @@ def main():
 
     mesh = VerticesMesh(vertices)
     renderer = Renderer(shader, MeshGroup(mesh), logic_provider)
-    mouse_event_handler = MouseEventHandler(0.05, shader)
-    engine_instance.mouse_event_handler = mouse_event_handler
+    movement_event_handler = MovementEventHandler(shader, 0.05, 0.05)
+    engine_instance.movement_event_handler = movement_event_handler
     engine_instance.run(renderer)
 
 
