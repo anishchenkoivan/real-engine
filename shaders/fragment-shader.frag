@@ -10,7 +10,6 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_RED   0
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
-#define COLOR_GREY  3
 
 struct Ray {
     vec3 start;
@@ -29,10 +28,9 @@ struct Reflection {
 };
 
 vec3 reflect(vec3 v, vec3 axis) {
-    axis = normalize(axis);
-    vec3 proj = dot(v, axis) * axis;
-    vec3 diff = v - proj;
-    return v - 2 * diff;
+    axis *= dot(axis, v);
+    return (v - 2 * axis);
+    return v - 2 * (v - axis);
 }
 
 bool isBlackSquare(float x) {
@@ -40,6 +38,13 @@ bool isBlackSquare(float x) {
 }
 
 float castRayWithSky(Ray ray) {
+    if (ray.color == COLOR_RED) {
+      return ray.dir.x;
+    }
+    if (ray.color == COLOR_BLUE) {
+      return ray.dir.y;
+    }
+    return ray.dir.z * 0.4;
     if (ray.dir.y > -0.1) {
         if (ray.color == COLOR_BLUE) {
             return 0.3;
@@ -72,19 +77,19 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     float t_min = min(t1, t2);
     float t_max = max(t1, t2);
 
-    float t = t_max;
+    float t = t_min;
 
-    if (t_min <= 0) {
-        if (t_max <= 0) {
+    if (t_min <= 1) {
+        if (t_max <= 1) {
             return Reflection(ray, INFTY);
         }
         t = t_max;
     }
 
     vec3 intersection = ray.start + ray.dir * t;
-    vec3 rvector = intersection - sph.centre;
+    vec3 rvector = normalize(intersection - sph.centre);
     vec3 refvector = reflect(ray.dir, rvector);
-    return Reflection(Ray(intersection, refvector, ray.color), t);
+    return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
 float castRay(Ray ray) {
@@ -92,7 +97,7 @@ float castRay(Ray ray) {
     Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5);
     Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25);
 
-    for (int i = 1; i < 7; ++i) {
+    for (int i = 0; i < 5; ++i) {
         Reflection refl1 = castRayWithSphere(ray, sph1);
         Reflection refl2 = castRayWithSphere(ray, sph2);
 
@@ -103,13 +108,20 @@ float castRay(Ray ray) {
         }
 
         if (refl.dist == INFTY) {
-            return castRayWithSky(refl.ray);
+            return castRayWithSky(ray);
         }
-
         ray = refl.ray;
+
+        // if (refl.dist == INFTY) {
+        //   return 1.0;
+        // }
+        // if (refl.dist >= 13.0) {
+        //   return 0.5;
+        // }
+        // return 0.0;
     }
 
-    return castRayWithSky(refl.ray);
+    return castRayWithSky(ray);
 }
 
 vec4 getColor(vec3 camera, vec3 dir) {
