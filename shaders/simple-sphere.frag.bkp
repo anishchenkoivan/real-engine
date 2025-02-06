@@ -6,13 +6,17 @@ uniform vec2 resolution;
 vec2 fragCoord = gl_FragCoord.xy;
 
 #define INFTY 1E9
-#define EPS   1E-3
 
 #define COLOR_RED   0
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
-#define ARRLEN(x)  (sizeof(x) / sizeof((x)[0]))
+struct Plane {
+    float a;
+    float b;
+    float c;
+    float d;
+};
 
 struct Ray {
     vec3 start;
@@ -20,24 +24,9 @@ struct Ray {
     int color;
 };
 
-struct Material {
-    float color[3];
-    float refllose[3];
-};
-
 struct Sphere {
     vec3 centre;
     float radius;
-    Material mat;
-};
-
-struct Plane {
-    float a;
-    float b;
-    float c;
-    float d;
-
-    Material mat;
 };
 
 struct Reflection {
@@ -47,35 +36,47 @@ struct Reflection {
 
 vec3 reflect(vec3 v, vec3 axis) {
     axis *= dot(axis, v);
-    return normalize(v - 2 * axis);
+    return (v - 2 * axis);
+    return v - 2 * (v - axis);
 }
 
 bool isBlackSquare(float x) {
     return int((x + 0.5) * 55) % 2 == 0;
 }
 
-float castRayWithSky(Ray ray) {
-    return 0.8;
-}
-
 Reflection castRayWithPlane(Ray ray, Plane plane) {
-    vec3 normal = normalize(vec3(plane.a, plane.b, plane.c));
+    vec3 normal = vec3(plane.a, plane.b, plane.c);
     float denom = dot(normal, ray.dir);
 
-    if (abs(denom) < EPS) {
+    if (abs(denom) < 1e-6) {
         return Reflection(ray, INFTY);
     }
 
-    float t = -(dot(normal, ray.start) + plane.d) / denom;
+    float t = -(dot(normal, ray.start) + float(plane.d)) / denom;
 
-    if (t < EPS) {
+    if (t < 0.0) {
         return Reflection(ray, INFTY);
     }
 
-    vec3 intersection = ray.start + ray.dir * t;
+    vec3 intersection = normalize(ray.start + ray.dir * t);
 
-    vec3 refvector = reflect(ray.dir, normal);
+    vec3 rvector = normal;
+    vec3 refvector = reflect(ray.dir, rvector);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
+}
+
+float castRayWithSky(Ray ray) {
+    if (ray.dir.y > -0.1) {
+        if (ray.color == COLOR_BLUE) {
+            return 0.3;
+        } else {
+            return 0.0;
+        }
+    }
+    if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
+        return 1.0;
+    }
+    return 0.0;
 }
 
 Reflection castRayWithSphere(Ray ray, Sphere sph) {
@@ -99,8 +100,8 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     float t = t_min;
 
-    if (t_min < EPS) {
-        if (t_max < EPS) {
+    if (t_min <= 1) {
+        if (t_max <= 1) {
             return Reflection(ray, INFTY);
         }
         t = t_max;
@@ -114,53 +115,30 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
 float castRay(Ray ray) {
     Reflection refl;
-    Material mat;
+    Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5);
+    Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25);
+    Plane pln1 = Plane(0.0, 1.0, 0.0, 0.0);
 
-    Material mt1 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
-    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3));
-    Material mt3 = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4));
+    for (int i = 0; i < 5; ++i) {
+        Reflection refl1 = castRayWithSphere(ray, sph1);
+        Reflection refl2 = castRayWithSphere(ray, sph2);
 
-    Sphere spheres[] = Sphere[](
-            Sphere(vec3(-2.0, 1.0, 13.0), 1.5, mt1),
-            Sphere(vec3(1.0, -1.2, 13.0), 1.25, mt2)
-        );
-
-    Plane planes[] = Plane[](
-            Plane(0.0, 1.0, 0.0, 2.0, mt3)
-        );
-
-    float res = 0.0;
-    float brightness = 1.0;
-
-    for (int i = 0; i < 10; ++i) {
-        refl.dist = INFTY;
-
-        for (int i = 0; i < 2; ++i) {
-            Reflection newrefl = castRayWithSphere(ray, spheres[i]);
-            if (newrefl.dist < refl.dist) {
-                refl = newrefl;
-                mat = spheres[i].mat;
-            }
-        }
-
-        for (int i = 0; i < 1; ++i) {
-            Reflection newrefl = castRayWithPlane(ray, planes[i]);
-            if (newrefl.dist < refl.dist) {
-                refl = newrefl;
-                mat = planes[i].mat;
-            }
+        if (refl1.dist < refl2.dist) {
+            refl = refl1;
+        } else {
+            refl = refl2;
         }
 
         if (refl.dist == INFTY) {
-            return res + brightness * castRayWithSky(ray);
+            refl = castRayWithPlane(ray, pln1);
+            if (refl.dist == INFTY) {
+                return castRayWithSky(ray);
+            }
         }
         ray = refl.ray;
-
-        res = brightness * mat.color[ray.color] * mat.refllose[ray.color];
-        brightness *= 1.0 - mat.refllose[ray.color];
     }
 
-    return res / brightness;
+    return castRayWithSky(ray);
 }
 
 vec4 getColor(vec3 camera, vec3 dir) {
