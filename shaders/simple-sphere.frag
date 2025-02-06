@@ -42,6 +42,14 @@ struct Plane {
     Material mat;
 };
 
+struct Triangle {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+
+    Material mat;
+};
+
 struct Reflection {
     Ray ray;
     float dist;
@@ -73,6 +81,44 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 refvector = reflect(ray.dir, normal);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
+}
+
+// https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+Reflection castRayWithTriangle(Ray ray, Triangle tr) {
+    vec3 edge1 = tr.b - tr.a;
+    vec3 edge2 = tr.c - tr.a;
+    vec3 ray_cross_e2 = cross(ray.dir, edge2);
+    float det = dot(edge1, ray_cross_e2);
+
+    if (det > -EPS && det < EPS)
+        return Reflection(ray, INFTY);
+
+    float inv_det = 1.0 / det;
+    vec3 s = ray.start - tr.a;
+    float u = inv_det * dot(s, ray_cross_e2);
+
+    if ((u < 0 && abs(u) > EPS) || (u > 1 && abs(u-1) > EPS))
+        return Reflection(ray, INFTY);
+
+    vec3 s_cross_e1 = cross(s, edge1);
+    float v = inv_det * dot(ray.dir, s_cross_e1);
+
+    if ((v < 0 && abs(v) > EPS) || (u + v > 1 && abs(u + v - 1) > EPS))
+        return Reflection(ray, INFTY);
+
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    float t = inv_det * dot(edge2, s_cross_e1);
+
+    if (t > EPS) // ray intersection
+    {
+        float dist = length(ray.dir) * t;
+        vec3 normal = normalize(cross(edge1, edge2));
+        vec3 reflection = reflect(ray.dir, normal);
+        vec3 intersection = ray.start + ray.dir * t;
+        return Reflection(Ray(intersection, reflection, ray.color), dist);
+    }
+    else // This means that there is a line intersection but not a ray intersection.
+        return Reflection(ray, INFTY);
 }
 
 Reflection castRayWithSphere(Ray ray, Sphere sph) {
@@ -126,27 +172,33 @@ float castRay(Ray ray) {
             Plane(0.0, 1.0, 0.0, 2.0, mt3)
         );
 
+    Triangle trs[] = Triangle[](
+            Triangle(vec3(-1.0, 0.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(3.0, 1.0, 10.0), mt3),
+            Triangle(vec3(-1.0, 1.0, 11.0), vec3(-1.0, 2.0, 10.0), vec3(3.0, 1.0, 10.0), mt3),
+            Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, -1.0, 9.0), vec3(3.0, 1.0, 10.0), mt3),
+            Triangle(vec3(-1.0, -1.0, 9.0), vec3(-1.0, 0.0, 10.0), vec3(3.0, 1.0, 10.0), mt3)
+        );
+
     float res = 0.0;
     float brightness = 1.0;
 
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
 
-        for (int i = 0; i < 2; ++i) {
-            Reflection newrefl = castRayWithSphere(ray, spheres[i]);
-            if (newrefl.dist < refl.dist) {
-                refl = newrefl;
-                mat = spheres[i].mat;
-            }
-        }
+        #define PROCESS_PRIMITIVE(primitives, castFunction, count) \
+                for (int i = 0; i < count; ++i) { \
+                    Reflection newrefl = castFunction(ray, primitives[i]); \
+                    if (newrefl.dist < refl.dist) { \
+                        refl = newrefl; \
+                        mat = primitives[i].mat; \
+                    } \
+                } \
 
-        for (int i = 0; i < 1; ++i) {
-            Reflection newrefl = castRayWithPlane(ray, planes[i]);
-            if (newrefl.dist < refl.dist) {
-                refl = newrefl;
-                mat = planes[i].mat;
-            }
-        }
+        PROCESS_PRIMITIVE(spheres, castRayWithSphere, 2);
+        PROCESS_PRIMITIVE(planes, castRayWithPlane, 1);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle, 4);
+
+        #undef PROCESS_PRIMITIVE
 
         if (refl.dist == INFTY) {
             return res + brightness * castRayWithSky(ray);
