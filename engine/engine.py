@@ -26,7 +26,7 @@ class Engine:
         if event.type == pygame.MOUSEMOTION:
             if self.mouse_event_handler is not None:
                 if pygame.mouse.get_pressed(3)[0]:
-                    self.mouse_event_handler.handle(pygame.mouse.get_rel())
+                    self.mouse_event_handler.handle_event(pygame.mouse.get_rel())
                 else:
                     pygame.mouse.get_rel()
         if event.type == pygame.KEYDOWN:

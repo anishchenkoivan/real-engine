@@ -2,7 +2,7 @@
 out vec4 color;
 
 uniform vec2 resolution;
-uniform mat3 rotationMatrix;
+uniform mat3 rotationMatrix = mat3(1.0);
 
 vec2 fragCoord = gl_FragCoord.xy;
 

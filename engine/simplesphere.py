@@ -1,10 +1,7 @@
-from math import radians
-
 from graphics import *
 from OpenGL.GL import *
 import config
 import engine
-from pyglm import glm
 
 
 def main():
@@ -27,7 +24,7 @@ def main():
 
     mesh = VerticesMesh(vertices)
     renderer = Renderer(shader, MeshGroup(mesh), logic_provider)
-    mouse_event_handler = MouseEventHandler(0.001, shader)
+    mouse_event_handler = MouseEventHandler(0.05, shader)
     engine_instance.mouse_event_handler = mouse_event_handler
     engine_instance.run(renderer)
 
@@ -53,20 +50,3 @@ class VerticesMesh(Mesh):
 
     def draw(self):
         glDrawArrays(GL_TRIANGLES, 0, 6)
-
-
-class MouseEventHandler:
-    def __init__(self, sensitivity, shader: ShaderProgram):
-        self.sensitivity = sensitivity
-        self.shader = shader
-        self.rotation_matrix = glm.mat3(1.0)
-
-    def handle(self, movement):
-        yaw, pitch = movement
-        yaw *= self.sensitivity
-        pitch *= self.sensitivity
-        yaw_matrix = glm.rotate(glm.mat4(1.0), yaw, glm.vec3(0, 1, 0))
-        pitch_matrix = glm.rotate(glm.mat4(1.0), pitch, glm.vec3(1, 0, 0))
-        roll_matrix = glm.rotate(glm.mat4(1.0), 0.0, glm.vec3(0, 0, 1))
-        self.rotation_matrix *= glm.mat3(yaw_matrix * pitch_matrix * roll_matrix)
-        glUniformMatrix3fv(glGetUniformLocation(self.shader.program, "rotationMatrix"), 1, GL_FALSE, glm.value_ptr(self.rotation_matrix))

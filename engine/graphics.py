@@ -1,7 +1,7 @@
 import OpenGL.GL.shaders
 import numpy as np
 from OpenGL.GL import *
-import ctypes
+from pyglm import glm
 
 class Shader:
     shader_type = {
@@ -73,9 +73,25 @@ class Renderer:
         self.mesh.draw()
 
 
-class EventHandler:
-    def __init__(self):
-        pass
+class MouseEventHandler:
+    def __init__(self, sensitivity, shader):
+        self.sensitivity = sensitivity
+        self.shader = shader
+        self.rotation_quat = glm.quat(1, 0, 0, 0)
 
-    def handle_event(self, event):
-        pass
+
+    def handle_event(self, movement):
+        yaw, pitch = movement
+        yaw *= self.sensitivity
+        pitch *= self.sensitivity
+        yaw = glm.radians(yaw)
+        pitch = glm.radians(pitch)
+
+        yaw_quat = glm.angleAxis(yaw, glm.vec3(0, 1, 0))
+        self.rotation_quat = yaw_quat * self.rotation_quat
+        right_vector = glm.normalize(self.rotation_quat * glm.vec3(1, 0, 0))
+        pitch_quat = glm.angleAxis(pitch, right_vector)
+        self.rotation_quat = pitch_quat * self.rotation_quat
+
+        rotation_matrix = glm.mat3_cast(self.rotation_quat)
+        glUniformMatrix3fv(glGetUniformLocation(self.shader.program, "rotationMatrix"), 1, GL_FALSE, glm.value_ptr(rotation_matrix))
