@@ -6,8 +6,8 @@ import engine
 
 def main():
     engine_instance = engine.Engine()
-    vertex_shader = Shader("../shaders/vertex-shader.vert")
-    fragment_shader = Shader("../shaders/fragment-shader.frag")
+    vertex_shader = Shader("../shaders/simple-sphere.vert")
+    fragment_shader = Shader("../shaders/simple-sphere.frag")
     shader = ShaderProgram(vertex_shader, fragment_shader)
     logic_provider = SimpleSphereLogicProvider(shader)
 
