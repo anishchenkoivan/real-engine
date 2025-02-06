@@ -1,4 +1,4 @@
-#version 330 core
+#version 460 core
 out vec4 color;
 
 uniform vec2 resolution;
@@ -41,13 +41,17 @@ bool isBlackSquare(float x) {
 
 float castRayWithSky(Ray ray) {
     if (ray.dir.y > -0.1) {
-        return 0.0;
+        if (ray.color == COLOR_BLUE) {
+            return 0.3;
+        } else {
+            return 0.0;
+        }
     }
     ray.dir = normalize(ray.dir);
     if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
         return 1.0;
     }
-    return 0.3;
+    return 0.0;
 }
 
 Reflection castRayWithSphere(Ray ray, Sphere sph) {
@@ -66,24 +70,54 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     float t1 = (-k2 - discr) / (2 * k1);
     float t2 = (-k2 + discr) / (2 * k1);
 
-    vec3 intersection = ray.start + ray.dir * t2;
+    if (t1 <= 1) {
+      t1 = t2;
+    }
+
+    vec3 intersection = ray.start + ray.dir * t1;
     vec3 rvector = intersection - sph.centre;
     vec3 refvector = reflect(ray.dir, rvector);
-    return Reflection(Ray(intersection, refvector, ray.color), t2);
+    return Reflection(Ray(intersection, refvector, ray.color), t1);
 }
 
-vec4 castRay(Ray ray) {
-    Sphere sph = Sphere(vec3(0.0, 0.0, 10.0), 0.5);
-    Reflection refl = castRayWithSphere(ray, sph);
-    ray = refl.ray;
+float castRay(Ray ray) {
+    Reflection refl;
 
-    float brightness;
-    if (refl.dist == INFTY) {
-        brightness = castRayWithSky(ray);
-    } else {
-        brightness = castRayWithSky(ray) * 0.5 + 0.5;
+    for (int i = 1; i < 3; ++i) {
+        Sphere sph1 = Sphere(vec3(0.0, 0.0, 13.0), 1.5);
+        Sphere sph2 = Sphere(vec3(-1.0, 0.0, 6.0), 0.5);
+        Reflection refl1 = castRayWithSphere(ray, sph1);
+        Reflection refl2 = castRayWithSphere(ray, sph2);
+
+        if (refl1.dist < refl2.dist) {
+            refl = refl1;
+        } else {
+            refl = refl2;
+        }
+
+        if (refl.dist == INFTY) {
+            return castRayWithSky(refl.ray) / i;
+        }
+
+        ray = refl.ray;
     }
-    return vec4(brightness, brightness, brightness, 1.0);
+
+    return castRayWithSky(refl.ray);
+}
+
+vec4 getColor(vec3 camera, vec3 dir) {
+    vec4 res = vec4(0.0, 0.0, 0.0, 1.0);
+
+    Ray ray = Ray(camera, dir, COLOR_RED);
+    res.x = castRay(ray);
+
+    ray.color = COLOR_GREEN;
+    res.y = castRay(ray);
+
+    ray.color = COLOR_BLUE;
+    res.z = castRay(ray);
+
+    return res;
 }
 
 void main() {
@@ -92,6 +126,5 @@ void main() {
     vec2 uv = fragCoord / d;
     vec3 camera = vec3(0.0, 0.0, -1.0);
     vec3 dir = normalize(vec3(uv, 0.0) - camera);
-    Ray ray = Ray(camera, dir, COLOR_GREY);
-    color = castRay(ray);
+    color = getColor(camera, dir);
 }
