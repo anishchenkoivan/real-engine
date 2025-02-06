@@ -1,3 +1,5 @@
+import sys
+
 import pygame
 from pygame.locals import *
 from graphics import Renderer
@@ -27,6 +29,7 @@ class Engine:
             for event in pygame.event.get():
                 if event.type == QUIT:
                     pygame.quit()
+                    sys.exit()
                 else:
                     self.handle_pygame_events(event)
 
