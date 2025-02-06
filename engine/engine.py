@@ -30,7 +30,7 @@ class Engine:
                     pygame.mouse.get_rel()
         if event.type == pygame.KEYDOWN:
             if self.movement_event_handler is not None:
-                self.movement_event_handler.handle_keydown_event(event)
+                self.movement_event_handler.handle_keydown_event()
 
     def run(self, renderer: Renderer):
         clock = pygame.time.Clock()
@@ -42,6 +42,8 @@ class Engine:
                     sys.exit()
                 else:
                     self.handle_pygame_events(event)
+            if self.movement_event_handler is not None and any(pygame.key.get_pressed()):
+                self.movement_event_handler.handle_keydown_event()
 
             renderer.render()
             pygame.display.flip()

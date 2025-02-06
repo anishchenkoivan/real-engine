@@ -100,22 +100,33 @@ class MovementEventHandler:
         rotation_matrix = glm.mat3_cast(self.rotation_quat)
         glUniformMatrix3fv(glGetUniformLocation(self.shader.program, "rotationMatrix"), 1, GL_FALSE, glm.value_ptr(rotation_matrix))
 
-    def handle_keydown_event(self, event: Event):
+    def handle_keydown_event(self):
         forward = glm.normalize(self.rotation_quat * glm.vec3(0, 0, 1))
         right = glm.normalize(self.rotation_quat * glm.vec3(1, 0, 0))
+        forward.y = 0
+        right.y = 0
+        forward = glm.normalize(forward)
+        right = glm.normalize(right)
         up = glm.vec3(0, 1, 0)
 
-        if event.key == pygame.K_w:
-            self.position_vec += forward * self.keyboard_sensitivity
-        elif event.key == pygame.K_s:
-            self.position_vec -= forward * self.keyboard_sensitivity
-        elif event.key == pygame.K_a:
-            self.position_vec -= right * self.keyboard_sensitivity
-        elif event.key == pygame.K_d:
-            self.position_vec += right * self.keyboard_sensitivity
-        elif event.key == pygame.K_SPACE:
-            self.position_vec += up * self.keyboard_sensitivity
-        elif event.key == pygame.K_LSHIFT:
-            self.position_vec -= up * self.keyboard_sensitivity
+        keys = pygame.key.get_pressed()
+
+        movement_vector = glm.vec3()
+
+        if keys[pygame.K_w]:
+            movement_vector += forward
+        if keys[pygame.K_s]:
+            movement_vector -= forward
+        if keys[pygame.K_a]:
+            movement_vector -= right
+        if keys[pygame.K_d]:
+            movement_vector += right
+        if keys[pygame.K_SPACE]:
+            movement_vector += up
+        if keys[pygame.K_LSHIFT]:
+            movement_vector -= up
+
+        if glm.length(movement_vector) != 0:
+            self.position_vec += glm.normalize(movement_vector) * self.keyboard_sensitivity
 
         glUniform3fv(glGetUniformLocation(self.shader.program, "position"), 1, glm.value_ptr(self.position_vec))
