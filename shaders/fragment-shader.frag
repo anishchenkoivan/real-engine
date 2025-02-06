@@ -6,6 +6,7 @@ uniform vec2 resolution;
 vec2 fragCoord = gl_FragCoord.xy;
 
 #define INFTY 1E9
+#define EPS   1E-3
 
 #define COLOR_RED   0
 #define COLOR_GREEN 1
@@ -17,9 +18,15 @@ struct Ray {
     int color;
 };
 
+struct Material {
+    float color[3];
+    float refllose[3];
+};
+
 struct Sphere {
     vec3 centre;
     float radius;
+    Material mat;
 };
 
 struct Reflection {
@@ -38,13 +45,13 @@ bool isBlackSquare(float x) {
 }
 
 float castRayWithSky(Ray ray) {
-    if (ray.color == COLOR_RED) {
-      return ray.dir.x;
-    }
-    if (ray.color == COLOR_BLUE) {
-      return ray.dir.y;
-    }
-    return ray.dir.z * 0.4;
+    // if (ray.color == COLOR_RED) {
+    //     return ray.dir.x;
+    // }
+    // if (ray.color == COLOR_BLUE) {
+    //     return ray.dir.y;
+    // }
+    // return ray.dir.z * 0.4;
     if (ray.dir.y > -0.1) {
         if (ray.color == COLOR_BLUE) {
             return 0.3;
@@ -52,6 +59,7 @@ float castRayWithSky(Ray ray) {
             return 0.0;
         }
     }
+    return 0.0;
     if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
         return 1.0;
     }
@@ -79,8 +87,8 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     float t = t_min;
 
-    if (t_min <= 1) {
-        if (t_max <= 1) {
+    if (t_min < EPS) {
+        if (t_max < EPS) {
             return Reflection(ray, INFTY);
         }
         t = t_max;
@@ -94,34 +102,38 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
 float castRay(Ray ray) {
     Reflection refl;
-    Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5);
-    Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25);
+    Material mat;
 
-    for (int i = 0; i < 5; ++i) {
+    Material mater1 = Material(float[](1.0, 0.0, 0.0), float[](0.1, 0.1, 0.1));
+    Material mater2 = Material(float[](0.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
+    Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5, mater1);
+    Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25, mater2);
+
+    float res = 0.0;
+    float brightness = 1.0;
+
+    for (int i = 0; i < 10; ++i) {
         Reflection refl1 = castRayWithSphere(ray, sph1);
         Reflection refl2 = castRayWithSphere(ray, sph2);
 
         if (refl1.dist < refl2.dist) {
             refl = refl1;
+            mat = sph1.mat;
         } else {
             refl = refl2;
+            mat = sph2.mat;
         }
 
         if (refl.dist == INFTY) {
-            return castRayWithSky(ray);
+            return res + brightness * castRayWithSky(ray);
         }
         ray = refl.ray;
 
-        // if (refl.dist == INFTY) {
-        //   return 1.0;
-        // }
-        // if (refl.dist >= 13.0) {
-        //   return 0.5;
-        // }
-        // return 0.0;
+        res = brightness * mat.color[ray.color] * mat.refllose[ray.color];
+        brightness *= 1.0 - mat.refllose[ray.color];
     }
 
-    return castRayWithSky(ray);
+    return res / brightness;
 }
 
 vec4 getColor(vec3 camera, vec3 dir) {
