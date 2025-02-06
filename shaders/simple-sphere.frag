@@ -2,6 +2,7 @@
 out vec4 color;
 
 uniform vec2 resolution;
+uniform mat3 rotationMatrix;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
@@ -184,5 +185,7 @@ void main() {
     vec2 uv = fragCoord / d;
     vec3 camera = vec3(0.0, 0.0, -1.0);
     vec3 dir = normalize(vec3(uv, 0.0) - camera);
+    dir = rotationMatrix * dir;
     color = getColor(camera, dir);
+    // color = vec4(dir, 1.0);
 }
