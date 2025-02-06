@@ -11,6 +11,13 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
+struct Plane {
+    float a;
+    float b;
+    float c;
+    float d;
+};
+
 struct Ray {
     vec3 start;
     vec3 dir;
@@ -37,14 +44,28 @@ bool isBlackSquare(float x) {
     return int((x + 0.5) * 55) % 2 == 0;
 }
 
+Reflection castRayWithPlane(Ray ray, Plane plane) {
+    vec3 normal = vec3(plane.a, plane.b, plane.c);
+    float denom = dot(normal, ray.dir);
+    
+    if (abs(denom) < 1e-6) {
+        return Reflection(ray, INFTY);
+    }
+
+    float t = -(dot(normal, ray.start) + float(plane.d)) / denom;
+    
+    if (t < 0.0) {
+        return Reflection(ray, INFTY);
+    }
+
+    vec3 intersection = normalize(ray.start + ray.dir * t);
+
+    vec3 rvector = normal;
+    vec3 refvector = reflect(ray.dir, rvector);
+    return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
+}
+
 float castRayWithSky(Ray ray) {
-    if (ray.color == COLOR_RED) {
-      return ray.dir.x;
-    }
-    if (ray.color == COLOR_BLUE) {
-      return ray.dir.y;
-    }
-    return ray.dir.z * 0.4;
     if (ray.dir.y > -0.1) {
         if (ray.color == COLOR_BLUE) {
             return 0.3;
@@ -96,6 +117,7 @@ float castRay(Ray ray) {
     Reflection refl;
     Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5);
     Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25);
+    Plane pln1 = Plane(0.0, 1.0, 0.0, 0.0);
 
     for (int i = 0; i < 5; ++i) {
         Reflection refl1 = castRayWithSphere(ray, sph1);
@@ -108,17 +130,12 @@ float castRay(Ray ray) {
         }
 
         if (refl.dist == INFTY) {
-            return castRayWithSky(ray);
+            refl = castRayWithPlane(ray, pln1);
+            if (refl.dist == INFTY) {
+                return castRayWithSky(ray);
+            }
         }
         ray = refl.ray;
-
-        // if (refl.dist == INFTY) {
-        //   return 1.0;
-        // }
-        // if (refl.dist >= 13.0) {
-        //   return 0.5;
-        // }
-        // return 0.0;
     }
 
     return castRayWithSky(ray);
