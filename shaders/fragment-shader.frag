@@ -5,7 +5,7 @@ uniform vec2 resolution;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
-#define INFTY (1.0 / 0.0)
+#define INFTY 1E9
 
 #define COLOR_RED   0
 #define COLOR_GREEN 1
@@ -47,7 +47,6 @@ float castRayWithSky(Ray ray) {
             return 0.0;
         }
     }
-    ray.dir = normalize(ray.dir);
     if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
         return 1.0;
     }
@@ -70,22 +69,30 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     float t1 = (-k2 - discr) / (2 * k1);
     float t2 = (-k2 + discr) / (2 * k1);
 
-    if (t1 <= 1) {
-      t1 = t2;
+    float t_min = min(t1, t2);
+    float t_max = max(t1, t2);
+
+    float t = t_max;
+
+    if (t_min <= 0) {
+        if (t_max <= 0) {
+            return Reflection(ray, INFTY);
+        }
+        t = t_max;
     }
 
-    vec3 intersection = ray.start + ray.dir * t1;
+    vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = intersection - sph.centre;
     vec3 refvector = reflect(ray.dir, rvector);
-    return Reflection(Ray(intersection, refvector, ray.color), t1);
+    return Reflection(Ray(intersection, refvector, ray.color), t);
 }
 
 float castRay(Ray ray) {
     Reflection refl;
+    Sphere sph1 = Sphere(vec3(-2.0, 1.0, 13.0), 1.5);
+    Sphere sph2 = Sphere(vec3(1.0, -1.2, 13.0), 1.25);
 
-    for (int i = 1; i < 3; ++i) {
-        Sphere sph1 = Sphere(vec3(0.0, 0.0, 13.0), 1.5);
-        Sphere sph2 = Sphere(vec3(-1.0, 0.0, 6.0), 0.5);
+    for (int i = 1; i < 7; ++i) {
         Reflection refl1 = castRayWithSphere(ray, sph1);
         Reflection refl2 = castRayWithSphere(ray, sph2);
 
@@ -96,7 +103,7 @@ float castRay(Ray ray) {
         }
 
         if (refl.dist == INFTY) {
-            return castRayWithSky(refl.ray) / i;
+            return castRayWithSky(refl.ray);
         }
 
         ray = refl.ray;
