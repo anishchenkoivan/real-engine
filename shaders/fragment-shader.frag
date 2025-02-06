@@ -47,8 +47,7 @@ struct Reflection {
 
 vec3 reflect(vec3 v, vec3 axis) {
     axis *= dot(axis, v);
-    return (v - 2 * axis);
-    return v - 2 * (v - axis);
+    return normalize(v - 2 * axis);
 }
 
 bool isBlackSquare(float x) {
@@ -78,23 +77,22 @@ float castRayWithSky(Ray ray) {
 }
 
 Reflection castRayWithPlane(Ray ray, Plane plane) {
-    vec3 normal = vec3(plane.a, plane.b, plane.c);
+    vec3 normal = normalize(vec3(plane.a, plane.b, plane.c));
     float denom = dot(normal, ray.dir);
 
-    if (abs(denom) < 1e-6) {
+    if (abs(denom) < EPS) {
         return Reflection(ray, INFTY);
     }
 
-    float t = -(dot(normal, ray.start) + float(plane.d)) / denom;
+    float t = -(dot(normal, ray.start) + plane.d) / denom;
 
-    if (t < 0.0) {
+    if (t < EPS) {
         return Reflection(ray, INFTY);
     }
 
-    vec3 intersection = normalize(ray.start + ray.dir * t);
+    vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 rvector = normal;
-    vec3 refvector = reflect(ray.dir, rvector);
+    vec3 refvector = reflect(ray.dir, normal);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
