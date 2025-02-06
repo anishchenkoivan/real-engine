@@ -55,25 +55,7 @@ bool isBlackSquare(float x) {
 }
 
 float castRayWithSky(Ray ray) {
-    if (ray.color == COLOR_RED) {
-        return ray.dir.x;
-    }
-    if (ray.color == COLOR_BLUE) {
-        return ray.dir.y;
-    }
-    return ray.dir.z * 0.4;
-    if (ray.dir.y > -0.1) {
-        if (ray.color == COLOR_BLUE) {
-            return 0.3;
-        } else {
-            return 0.0;
-        }
-    }
-    return 0.0;
-    if (isBlackSquare(ray.dir.x) ^^ isBlackSquare(ray.dir.y)) {
-        return 1.0;
-    }
-    return 0.0;
+    return 0.8;
 }
 
 Reflection castRayWithPlane(Ray ray, Plane plane) {
@@ -134,16 +116,17 @@ float castRay(Ray ray) {
     Reflection refl;
     Material mat;
 
-    Material mt1 = Material(float[](1.0, 0.0, 0.0), float[](0.1, 0.1, 0.1));
-    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
+    Material mt1 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
+    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3));
+    Material mt3 = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4));
 
     Sphere spheres[] = Sphere[](
             Sphere(vec3(-2.0, 1.0, 13.0), 1.5, mt1),
-            Sphere(vec3(1.0, -1.2, 13.0), 1.25, mt1)
+            Sphere(vec3(1.0, -1.2, 13.0), 1.25, mt2)
         );
 
     Plane planes[] = Plane[](
-            Plane(0.0, 1.0, 0.0, 2.0, mt2)
+            Plane(0.0, 1.0, 0.0, 2.0, mt3)
         );
 
     float res = 0.0;
