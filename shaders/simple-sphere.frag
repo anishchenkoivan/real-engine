@@ -176,7 +176,8 @@ float castRay(Ray ray) {
             Triangle(vec3(-1.0, 0.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(3.0, 1.0, 10.0), mt3),
             Triangle(vec3(-1.0, 1.0, 11.0), vec3(-1.0, 2.0, 10.0), vec3(3.0, 1.0, 10.0), mt3),
             Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, -1.0, 9.0), vec3(3.0, 1.0, 10.0), mt3),
-            Triangle(vec3(-1.0, -1.0, 9.0), vec3(-1.0, 0.0, 10.0), vec3(3.0, 1.0, 10.0), mt3)
+            Triangle(vec3(-1.0, -1.0, 9.0), vec3(-1.0, 0.0, 10.0), vec3(3.0, 1.0, 10.0), mt3),
+            Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(-1.0, -1.0, 9.0), mt3)
         );
 
     float res = 0.0;
@@ -196,7 +197,7 @@ float castRay(Ray ray) {
 
         PROCESS_PRIMITIVE(spheres, castRayWithSphere, 2);
         PROCESS_PRIMITIVE(planes, castRayWithPlane, 1);
-        PROCESS_PRIMITIVE(trs, castRayWithTriangle, 4);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle, 5);
 
         #undef PROCESS_PRIMITIVE
 
