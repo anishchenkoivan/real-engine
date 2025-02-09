@@ -14,8 +14,6 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
-#define ARRLEN(x)  (sizeof(x) / sizeof((x)[0]))
-
 struct Ray {
     vec3 start;
     vec3 dir;
@@ -60,7 +58,13 @@ bool isBlackSquare(float x) {
 }
 
 float castRayWithSky(Ray ray) {
-    return 0.8;
+    float[] sunColor = float[](1.0, 1.0, 0.0);
+    float[] skyColor = float[](0.67, 0.84, 0.89);
+
+    if (distance(ray.dir, normalize(vec3(0.4, 0.3, 1.0))) < 0.05) {
+        return sunColor[ray.color];
+    }
+    return skyColor[ray.color];
 }
 
 Reflection castRayWithPlane(Ray ray, Plane plane) {
@@ -97,7 +101,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     vec3 s = ray.start - tr.a;
     float u = inv_det * dot(s, ray_cross_e2);
 
-    if ((u < 0 && abs(u) > EPS) || (u > 1 && abs(u-1) > EPS))
+    if ((u < 0 && abs(u) > EPS) || (u > 1 && abs(u - 1) > EPS))
         return Reflection(ray, INFTY);
 
     vec3 s_cross_e1 = cross(s, edge1);
@@ -187,13 +191,13 @@ float castRay(Ray ray) {
         refl.dist = INFTY;
 
         #define PROCESS_PRIMITIVE(primitives, castFunction, count) \
-                for (int i = 0; i < count; ++i) { \
-                    Reflection newrefl = castFunction(ray, primitives[i]); \
-                    if (newrefl.dist < refl.dist) { \
-                        refl = newrefl; \
-                        mat = primitives[i].mat; \
+                    for (int i = 0; i < count; ++i) { \
+                        Reflection newrefl = castFunction(ray, primitives[i]); \
+                        if (newrefl.dist < refl.dist) { \
+                            refl = newrefl; \
+                            mat = primitives[i].mat; \
+                        } \
                     } \
-                } \
 
         PROCESS_PRIMITIVE(spheres, castRayWithSphere, 2);
         PROCESS_PRIMITIVE(planes, castRayWithPlane, 1);
