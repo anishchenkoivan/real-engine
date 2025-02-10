@@ -48,16 +48,24 @@ struct Triangle {
     int material;
 };
 
-layout(std430) buffer PrimitivesBuffer {
-    uint materialsCount;
-    uint spheresCount;
-    uint planesCount;
-    uint trianglesCount;
+#define MATERIALS_MAX_COUNT 10
+#define TRIANGLES_MAX_COUNT 100
+#define SPHERES_MAX_COUNT   10
+#define PLANES_MAX_COUNT    10
 
-    Material materials[];
-    Sphere spheres[];
-    Plane planes[];
-    Triangle trs[];
+uniform uint materialsCount;
+uniform uint spheresCount;
+uniform uint planesCount;
+uniform uint trianglesCount;
+
+layout(std430) buffer MaterialsBlock {
+    Material materials[MATERIALS_MAX_COUNT];
+};
+
+layout(std430) buffer PrimitivesBuffer {
+    Sphere spheres[TRIANGLES_MAX_COUNT];
+    Plane planes[SPHERES_MAX_COUNT];
+    Triangle trs[PLANES_MAX_COUNT];
 };
 
 struct Reflection {
@@ -190,9 +198,9 @@ float castRay(Ray ray) {
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
 
-        PROCESS_PRIMITIVE(spheres, castRayWithSphere, PrimitivesBuffer.spheresCount);
-        PROCESS_PRIMITIVE(planes, castRayWithPlane, PrimitivesBuffer.planesCount);
-        PROCESS_PRIMITIVE(trs, castRayWithTriangle, PrimitivesBuffer.trianglesCount);
+        PROCESS_PRIMITIVE(spheres, castRayWithSphere, spheresCount);
+        PROCESS_PRIMITIVE(planes, castRayWithPlane, planesCount);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle, trianglesCount);
 
         if (refl.dist == INFTY) {
             return res + brightness * castRayWithSky(ray);
