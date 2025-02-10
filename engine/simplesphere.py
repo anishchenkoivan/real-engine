@@ -2,6 +2,7 @@ from graphics import *
 from OpenGL.GL import *
 import config
 import engine
+import random
 
 
 def main():
@@ -36,6 +37,8 @@ class SimpleSphereLogicProvider(LogicProvider):
 
     def render(self):
         glUniform2f(glGetUniformLocation(self.shader.program, "resolution"), config.RESOLUTION[0], config.RESOLUTION[1])
+        glUniform1f(glGetUniformLocation(self.shader.program, "rand1"), random.random())
+        glUniform1f(glGetUniformLocation(self.shader.program, "rand2"), random.random())
 
 
 class VerticesMesh(Mesh):

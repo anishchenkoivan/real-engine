@@ -4,6 +4,8 @@ out vec4 color;
 uniform vec2 resolution;
 uniform mat3 rotationMatrix = mat3(1.0);
 uniform vec3 position = vec3(0.0, 0.0, -1.0);
+uniform float rand1;
+uniform float rand2;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
@@ -23,6 +25,7 @@ struct Ray {
 struct Material {
     float color[3];
     float refllose[3];
+    float roughness[3];
 };
 
 struct Sphere {
@@ -57,6 +60,39 @@ bool isBlackSquare(float x) {
     return int((x + 0.5) * 55) % 2 == 0;
 }
 
+float hash(vec3 seed) {
+    return fract(sin(dot(seed, vec3(12.9898, 78.233, 45.164))) * 43758.5453 * rand1);
+}
+
+vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 rayOrigin) {
+    float rand1 = hash(rayOrigin + incidentDir);
+    float rand2 = hash(rayOrigin - incidentDir);
+
+    float theta = 2.0 * 3.14159265359 * rand1;
+    float phi = acos(mix(1.0, 2.0 * rand2 - 1.0, roughness));
+
+    vec3 randDir = vec3(
+        sin(phi) * cos(theta),
+        sin(phi) * sin(theta),
+        cos(phi)
+    );
+
+    vec3 perfectReflection = reflect(incidentDir, normal);
+
+    vec3 up = abs(perfectReflection.y) < 0.999 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(up, perfectReflection));
+    vec3 bitangent = cross(perfectReflection, tangent);
+
+    vec3 randomReflection = normalize(
+        tangent * randDir.x + 
+        bitangent * randDir.y + 
+        perfectReflection * randDir.z
+    );
+
+    return normalize(mix(perfectReflection, randomReflection, roughness));
+}
+
+
 float castRayWithSky(Ray ray) {
     float[] sunColor = float[](1.0, 1.0, 0.0);
     float[] skyColor = float[](0.67, 0.84, 0.89);
@@ -83,7 +119,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 refvector = reflect(ray.dir, normal);
+    vec3 refvector = diffusedReflection(normal, ray.dir, plane.mat.roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
@@ -117,7 +153,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = reflect(ray.dir, normal);
+        vec3 reflection = diffusedReflection(normal, ray.dir, tr.mat.roughness[ray.color], ray.start);
         vec3 intersection = ray.start + ray.dir * t;
         return Reflection(Ray(intersection, reflection, ray.color), dist);
     }
@@ -155,7 +191,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = reflect(ray.dir, rvector);
+    vec3 refvector = diffusedReflection(rvector, ray.dir, sph.mat.roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
@@ -163,9 +199,9 @@ float castRay(Ray ray) {
     Reflection refl;
     Material mat;
 
-    Material mt1 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
-    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3));
-    Material mt3 = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4));
+    Material mt1 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1), float[](0.05, 0.05, 0.05));
+    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3), float[](0.05, 0.05, 0.05));
+    Material mt3 = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4), float[](0.01, 0.01, 0.01));
 
     Sphere spheres[] = Sphere[](
             Sphere(vec3(-2.0, 1.0, 13.0), 1.5, mt1),
