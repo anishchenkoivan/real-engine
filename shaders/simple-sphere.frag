@@ -185,14 +185,15 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     } \
 
 float castRay(Ray ray) {
-    Reflection refl;
-    int material;
+    Reflection refl = Reflection(ray, INFTY);
+    int material = 0;
 
     float res = 0.0;
     float brightness = 1.0;
 
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
+        material = 0;
 
         PROCESS_PRIMITIVE(spheres, castRayWithSphere);
         PROCESS_PRIMITIVE(planes, castRayWithPlane);
