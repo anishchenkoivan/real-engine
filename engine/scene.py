@@ -40,6 +40,14 @@ class SceneLoader(LogicProvider):
         self.shader = shader_program
         self.materials = self.define_materials_list()
 
+        self.materials_SSBO = glGenBuffers(1)
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.materials_SSBO)
+        glBufferData(GL_SHADER_STORAGE_BUFFER, len(self.materials), self.materials, GL_STATIC_DRAW)
+        index = glGetProgramResourceIndex(self.shader.program, GL_SHADER_STORAGE_BLOCK, "MaterialsBlock")
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, self.materials_SSBO)
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+
     @typing.final
     def render(self):
         super().render()
@@ -48,14 +56,14 @@ class SceneLoader(LogicProvider):
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
 
-        glUniform1i(glGetUniformLocation(
-            self.shader.program, "materialsCount"), 1, GL_FALSE, glm.int32(len(self.materials)))
-        glUniform1i(glGetUniformLocation(
-            self.shader.program, "spheresCount"), 1, GL_FALSE, glm.int32(len(spheres)))
-        glUniform1i(glGetUniformLocation(
-            self.shader.program, "planesCount"), 1, GL_FALSE, glm.int32(len(planes)))
-        glUniform1i(glGetUniformLocation(
-            self.shader.program, "trianglesCount"), 1, GL_FALSE, glm.int32(len(triangles)))
+        glUniform1ui(glGetUniformLocation(
+            self.shader.program, "materialsCount"), 1, GL_FALSE, glm.uint32(len(self.materials)))
+        glUniform1ui(glGetUniformLocation(
+            self.shader.program, "spheresCount"), 1, GL_FALSE, glm.uint32(len(spheres)))
+        glUniform1ui(glGetUniformLocation(
+            self.shader.program, "planesCount"), 1, GL_FALSE, glm.uint32(len(planes)))
+        glUniform1ui(glGetUniformLocation(
+            self.shader.program, "trianglesCount"), 1, GL_FALSE, glm.uint32(len(triangles)))
 
         # index = glGetUniformBlockIndex(self.shader.program, "materials")
         # print(index)
@@ -90,10 +98,10 @@ class ExampleSceneLoader(SceneLoader):
     def define_materials_list(self):
         arr = []
 
-        for _ in range(100):
-            arr.append(glm.vec4(1.0, 1.0, 1.0, 1.0))
+        for _ in range(200):
+            arr.append(Material(glm.vec3(1.0, 1.0, 1.0), glm.vec3(1.0, 1.0, 1.0)))
 
-        return np.array([arr])
+        return np.array(arr)
 
 
     @typing.override
