@@ -48,20 +48,17 @@ struct Triangle {
     int material;
 };
 
-#define MATERIALS_MAX_COUNT 100
-#define TRIANGLES_MAX_COUNT 100
-#define SPHERES_MAX_COUNT   10
-#define PLANES_MAX_COUNT    3
+layout(std430) buffer PrimitivesBuffer {
+    uint materialsCount;
+    uint spheresCount;
+    uint planesCount;
+    uint trianglesCount;
 
-uniform int materialsCount = 0;
-uniform int trianglesCount = 0;
-uniform int spheresCount = 0;
-uniform int planesCount = 0;
-
-uniform Material materials[MATERIALS_MAX_COUNT];
-uniform Triangle trs[TRIANGLES_MAX_COUNT];
-uniform Sphere spheres[SPHERES_MAX_COUNT];
-uniform Plane planes[PLANES_MAX_COUNT];
+    Material materials[];
+    Sphere spheres[];
+    Plane planes[];
+    Triangle trs[];
+};
 
 struct Reflection {
     Ray ray;
@@ -174,28 +171,18 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
+#define PROCESS_PRIMITIVE(primitives, castFunction, count) \
+    for (int i = 0; i < count; ++i) { \
+        Reflection newrefl = castFunction(ray, primitives[i]); \
+        if (newrefl.dist < refl.dist) { \
+            refl = newrefl; \
+            material = primitives[i].material; \
+        } \
+    } \
+
 float castRay(Ray ray) {
     Reflection refl;
     int material;
-
-    // materials[0] = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1));
-    // materials[1] = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3));
-    // materials[2] = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4));
-    // materialsCount = 3;
-
-    // spheres[0] = Sphere(vec3(-2.0, 1.0, 13.0), 1.5, 0);
-    // spheres[1] = Sphere(vec3(1.0, -1.2, 13.0), 1.25, 1);
-    // spheresCount = 2;
-
-    // planes[0] = Plane(0.0, 1.0, 0.0, 2.0, 2);
-    // planesCount = 1;
-
-    // trs[0] = Triangle(vec3(-1.0, 0.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(3.0, 1.0, 10.0), 2);
-    // trs[1] = Triangle(vec3(-1.0, 1.0, 11.0), vec3(-1.0, 2.0, 10.0), vec3(3.0, 1.0, 10.0), 2);
-    // trs[2] = Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, -1.0, 9.0), vec3(3.0, 1.0, 10.0), 2);
-    // trs[3] = Triangle(vec3(-1.0, -1.0, 9.0), vec3(-1.0, 0.0, 10.0), vec3(3.0, 1.0, 10.0), 2);
-    // trs[4] = Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(-1.0, -1.0, 9.0), 2);
-    // trianglesCount = 5;
 
     float res = 0.0;
     float brightness = 1.0;
@@ -203,20 +190,9 @@ float castRay(Ray ray) {
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
 
-        #define PROCESS_PRIMITIVE(primitives, castFunction, count) \
-                                                          for (int i = 0; i < count; ++i) { \
-                                                              Reflection newrefl = castFunction(ray, primitives[i]); \
-                                                              if (newrefl.dist < refl.dist) { \
-                                                                  refl = newrefl; \
-                                                                  material = primitives[i].material; \
-                                                              } \
-                                                          } \
-
-        PROCESS_PRIMITIVE(spheres, castRayWithSphere, spheresCount);
-        PROCESS_PRIMITIVE(planes, castRayWithPlane, planesCount);
-        PROCESS_PRIMITIVE(trs, castRayWithTriangle, trianglesCount);
-
-        #undef PROCESS_PRIMITIVE
+        PROCESS_PRIMITIVE(spheres, castRayWithSphere, PrimitivesBuffer.spheresCount);
+        PROCESS_PRIMITIVE(planes, castRayWithPlane, PrimitivesBuffer.planesCount);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle, PrimitivesBuffer.trianglesCount);
 
         if (refl.dist == INFTY) {
             return res + brightness * castRayWithSky(ray);
@@ -229,6 +205,8 @@ float castRay(Ray ray) {
 
     return res / brightness;
 }
+
+#undef PROCESS_PRIMITIVE
 
 vec4 getColor(vec3 camera, vec3 dir) {
     vec4 res = vec4(0.0, 0.0, 0.0, 1.0);
