@@ -3,6 +3,8 @@ from OpenGL.GL import *
 import config
 import engine
 
+from scene import ExampleSceneLoader
+
 
 def main():
     engine_instance = engine.Engine()
@@ -33,9 +35,12 @@ class SimpleSphereLogicProvider(LogicProvider):
     def __init__(self, shader: ShaderProgram):
         super().__init__()
         self.shader = shader
+        self.scene_loader = ExampleSceneLoader(shader)
 
     def render(self):
-        glUniform2f(glGetUniformLocation(self.shader.program, "resolution"), config.RESOLUTION[0], config.RESOLUTION[1])
+        self.scene_loader.render()
+        glUniform2f(glGetUniformLocation(self.shader.program,
+                    "resolution"), config.RESOLUTION[0], config.RESOLUTION[1])
 
 
 class VerticesMesh(Mesh):
