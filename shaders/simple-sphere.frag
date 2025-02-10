@@ -21,8 +21,8 @@ struct Ray {
 };
 
 struct Material {
-    float color[3];
-    float refllose[3];
+    vec3 color;
+    vec3 refllose;
 };
 
 struct Sphere {
@@ -48,26 +48,28 @@ struct Triangle {
     int material;
 };
 
-layout(std430, binding=0) buffer MaterialsBuffer {
+#define LAYOUT std430
+
+layout(LAYOUT, binding = 0) buffer MaterialsBuffer {
     Material materials[];
 };
 
-layout(std430, binding=1) buffer SpheresBuffer {
+layout(LAYOUT, binding = 1) buffer SpheresBuffer {
     Sphere spheres[];
 };
 
-layout(std430, binding=2) buffer PlanesBuffer {
+layout(LAYOUT, binding = 2) buffer PlanesBuffer {
     Plane planes[];
 };
 
-layout(std430, binding=3) buffer TrianglesBuffer {
+layout(LAYOUT, binding = 3) buffer TrianglesBuffer {
     Triangle trs[];
 };
 
 uniform vec3 sunPosition;
 uniform float sunRadius;
-uniform float[3] sunColor;
-uniform float[3] skyColor;
+uniform vec3 sunColor;
+uniform vec3 skyColor;
 
 struct Reflection {
     Ray ray;

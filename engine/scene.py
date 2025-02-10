@@ -53,7 +53,7 @@ class Material(LoadableObject):
     def as_array(self):
         return [
             self.color.red, self.color.green, self.color.blue, 0.0,
-            self.refllose.red, self.refllose.green, self.refllose.blue, 0.0
+            self.refllose.red, self.refllose.green, self.refllose.blue, 0.0,
         ]
 
 
@@ -73,8 +73,7 @@ class Sphere(GraphicalPrimitive):
     def as_array(self):
         return [
             self.centre.x, self.centre.y, self.centre.z,
-            self.radius, self.material_index,
-            0.0, 0.0, 0.0  # padding
+            self.radius, self.material_index, 0.0, 0.0, 0.0
         ]
 
 
@@ -106,8 +105,7 @@ class Triangle(GraphicalPrimitive):
         return [
             self.a.x, self.a.y, self.a.z, 0.0,
             self.b.x, self.b.y, self.b.z, 0.0,
-            self.c.x, self.c.y, self.c.z,
-            self.material_index
+            self.c.x, self.c.y, self.c.z, self.material_index,
         ]
 
 
@@ -134,12 +132,11 @@ class SceneLoader(LogicProvider):
         return self.last_material_index - 1
 
     def initialize(self):
-        materials = self.define_materials_list()
         spheres = self.spawn_spheres()
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
 
-        self.load_SSBO(materials, Buffers.MATERIAlS.value)
+        self.load_SSBO(self.materials, Buffers.MATERIAlS.value)
         self.load_SSBO(spheres, Buffers.SPHERES.value)
         self.load_SSBO(planes, Buffers.PLANES.value)
         self.load_SSBO(triangles, Buffers.TRIANGLES.value)
@@ -150,8 +147,8 @@ class SceneLoader(LogicProvider):
         if len(data) == 0:
             return
 
-        size = len(data) * len(data[0].as_array()) * 4
         data = SceneLoader.to_glm_array(data)
+        size = len(data) * 4
         ssbo = glGenBuffers(1)
         glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo)
         glBufferData(GL_SHADER_STORAGE_BUFFER, size, None, GL_STATIC_DRAW)
@@ -164,13 +161,10 @@ class SceneLoader(LogicProvider):
         glUniform1f(glGetUniformLocation(self.shader.program,
                     "sunRadius"), conf.sunRadius)
 
-        for i in range(3):
-            glUniform1f(glGetUniformLocation(self.shader.program,
-                        f"sunColor[{i}]"), conf.sunColor[i])
-
-        for i in range(3):
-            glUniform1f(glGetUniformLocation(self.shader.program,
-                        f"skyColor[{i}]"), conf.skyColor[i])
+        glUniform3f(glGetUniformLocation(self.shader.program,
+                                         f"sunColor"), conf.sunColor.red, conf.sunColor.green, conf.sunColor.blue)
+        glUniform3f(glGetUniformLocation(self.shader.program,
+                                         f"skyColor"), conf.skyColor.red, conf.skyColor.green, conf.skyColor.blue)
 
     @staticmethod
     def to_glm_array(data: list[LoadableObject]):
@@ -178,6 +172,7 @@ class SceneLoader(LogicProvider):
 
         for i in data:
             arr += i.as_array()
+        print(arr)
 
         return glm.array(glm.float32, *arr)
 
@@ -200,30 +195,41 @@ class SceneLoader(LogicProvider):
 class ExampleSceneLoader(SceneLoader):
     def __init__(self, shader_program: ShaderProgram):
         super().__init__(shader_program)
+        print(self.mt1.as_array())
+        print(self.mt2.as_array())
+        print(self.mt3.as_array())
 
     @typing.override
     def define_materials_list(self):
-        mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self)
-        mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
-        mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
-        return [mt1, mt2, mt3]
+        self.mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self)
+        self.mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
+        return [self.mt1, self.mt2, self.mt3]
 
     @typing.override
     def spawn_spheres(self):
         return [
-            Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.materials[0]),
-            Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.materials[1]),
+            Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.mt1),
+            Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.mt2),
         ]
 
     @typing.override
     def spawn_planes(self):
         return [
-            Plane(0.0, 1.0, 0.0, 2.0, self.materials[2])
+            Plane(0.0, 1.0, 0.0, 2.0, self.mt1)
         ]
 
     @typing.override
     def spawn_triangles(self):
         return [
             Triangle(Vector(-1.0, 0.0, 10.0), Vector(-1.0, 1.0, 11.0),
-                     Vector(3.0, 1.0, 10.0), self.materials[2]),
+                     Vector(3.0, 1.0, 10.0), self.mt3),
+            Triangle(Vector(-1.0, 1.0, 11.0), Vector(-1.0, 2.0, 10.0),
+                     Vector(3.0, 1.0, 10.0), self.mt3),
+            Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, -1.0, 9.0),
+                     Vector(3.0, 1.0, 10.0), self.mt3),
+            Triangle(Vector(-1.0, -1.0, 9.0), Vector(-1.0, 0.0, 10.0),
+                     Vector(3.0, 1.0, 10.0), self.mt3),
+            Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, 1.0, 11.0),
+                     Vector(-1.0, -1.0, 9.0), self.mt3)
         ]
