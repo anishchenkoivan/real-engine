@@ -1,5 +1,6 @@
 import typing
-from graphics import LogicProvider, Renderer, ShaderProgram, MeshGroup
+from enum import Enum
+from graphics import LogicProvider, ShaderProgram
 
 import OpenGL.GL.shaders
 import numpy as np
@@ -7,87 +8,165 @@ from OpenGL.GL import *
 from pyglm import glm
 
 
-class Material(typing.NamedTuple):
-    color: glm.vec3
-    refllose: glm.vec3
+class Buffers(Enum):
+    MATERIAlS = 0
+    SPHERES = 1
+    PLANES = 2
+    TRIANGLES = 3
 
 
-class Sphere(typing.NamedTuple):
-    centre: glm.vec3
-    radius: float
-    material_idx: int
+class Color(typing.NamedTuple):
+    red: float
+    green: float
+    blue: float
 
 
-class Plane(typing.NamedTuple):
-    a: float
-    b: float
-    c: float
-    d: float
-    material_idx: int
+class Vector(typing.NamedTuple):
+    x: float
+    y: float
+    z: float
 
 
-class Triangle(typing.NamedTuple):
-    a: glm.vec3
-    b: glm.vec3
-    c: glm.vec3
-    material_idx: int
+class LoadableObject:
+    def __init__(self):
+        pass
+
+    def as_array(self):
+        raise NotImplementedError()
+
+
+class Material(LoadableObject):
+    def __init__(self, color: Color, refllose: Color, scene_loader):
+        self.color = color
+        self.refllose = refllose
+        self.index = scene_loader.new_material_index()
+
+    @typing.override
+    def as_array(self):
+        return [
+            self.color.red, self.color.green, self.color.blue, 0.0,
+            self.refllose.red, self.refllose.green, self.refllose.blue, 0.0
+        ]
+
+
+class GraphicalPrimitive(LoadableObject):
+    def __init__(self, material: Material):
+        self.material_index = material.index
+
+
+class Sphere(GraphicalPrimitive):
+    def __init__(self, centre: Vector, radius, material: Material):
+        super().__init__(material)
+        self.centre = centre
+        self.radius = radius
+
+    @typing.override
+    def as_array(self):
+        return [
+            self.centre.x, self.centre.y, self.centre.z,
+            self.radius, self.material_index,
+            0.0, 0.0, 0.0  # padding
+        ]
+
+
+class Plane(GraphicalPrimitive):
+    def __init__(self, a: float, b: float, c: float, d: float, material: Material):
+        super().__init__(material)
+        self.a = a
+        self.b = b
+        self.c = c
+        self.d = d
+
+    @typing.override
+    def as_array(self):
+        return [
+            self.a, self.b, self.c, self.d, self.material_index,
+            0.0, 0.0, 0.0  # padding
+        ]
+
+
+class Triangle(GraphicalPrimitive):
+    def __init__(self, a: Vector, b: Vector, c: Vector, material: Material):
+        super().__init__(material)
+        self.a = a
+        self.b = b
+        self.c = c
+
+    @typing.override
+    def as_array(self):
+        return [
+            self.a.x, self.a.y, self.a.z, 0.0,
+            self.b.x, self.b.y, self.b.z, 0.0,
+            self.c.x, self.c.y, self.c.z,
+            self.material_index
+        ]
 
 
 class SceneLoader(LogicProvider):
     def __init__(self, shader_program: ShaderProgram):
         super().__init__()
-
         self.shader = shader_program
+        self.__initialized = False
+
+        self.last_material_index = 0
         self.materials = self.define_materials_list()
-
-        self.materials_SSBO = glGenBuffers(1)
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, self.materials_SSBO)
-        glBufferData(GL_SHADER_STORAGE_BUFFER, len(self.materials), self.materials, GL_STATIC_DRAW)
-        index = glGetProgramResourceIndex(self.shader.program, GL_SHADER_STORAGE_BLOCK, "MaterialsBlock")
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, self.materials_SSBO)
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
+        self.materials = sorted(self.materials, key=lambda mat: mat.index)
 
     @typing.final
     def render(self):
+        if not self.__initialized:
+            self.initialize()
+            self.__initialized = True
+
         super().render()
 
+    def new_material_index(self):
+        self.last_material_index += 1
+        return self.last_material_index - 1
+
+    def initialize(self):
+        materials = self.define_materials_list()
         spheres = self.spawn_spheres()
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
 
-        glUniform1ui(glGetUniformLocation(
-            self.shader.program, "materialsCount"), 1, GL_FALSE, glm.uint32(len(self.materials)))
-        glUniform1ui(glGetUniformLocation(
-            self.shader.program, "spheresCount"), 1, GL_FALSE, glm.uint32(len(spheres)))
-        glUniform1ui(glGetUniformLocation(
-            self.shader.program, "planesCount"), 1, GL_FALSE, glm.uint32(len(planes)))
-        glUniform1ui(glGetUniformLocation(
-            self.shader.program, "trianglesCount"), 1, GL_FALSE, glm.uint32(len(triangles)))
+        self.load_SSBO(materials, Buffers.MATERIAlS.value)
+        self.load_SSBO(spheres, Buffers.SPHERES.value)
+        self.load_SSBO(planes, Buffers.PLANES.value)
+        self.load_SSBO(triangles, Buffers.TRIANGLES.value)
 
-        # index = glGetUniformBlockIndex(self.shader.program, "materials")
-        # print(index)
-        # glBindBuffer(GL_UNIFORM_BUFFER, index)
-        # glBufferData(index, self.materials, GL_UNIFORM_BUFFER)
+    def load_SSBO(self, data, index):
+        if len(data) == 0:
+            return
 
-        # uboExampleBlock = np.array([0], dtype=np.int32)
-        # glGenBuffers(1, uboExampleBlock)
-        # glBindBuffer(GL_UNIFORM_BUFFER, uboExampleBlock)
-        # glBufferData(GL_UNIFORM_BUFFER, 152, None, GL_STATIC_DRAW)
-        # glBindBuffer(GL_UNIFORM_BUFFER, 0)
+        size = len(data) * len(data[0].as_array()) * 4
+        data = SceneLoader.to_glm_array(data)
+        ssbo = glGenBuffers(1)
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo)
+        glBufferData(GL_SHADER_STORAGE_BUFFER, size, None, GL_STATIC_DRAW)
+        glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data.ptr)
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, ssbo)
 
+    @staticmethod
+    def to_glm_array(data: list[LoadableObject]):
+        arr = []
+
+        for i in data:
+            arr += i.as_array()
+
+        return glm.array(glm.float32, *arr)
 
     def define_materials_list(self):
         raise NotImplementedError()
 
     def spawn_spheres(self):
-        return []
+        return glm.array(glm.float32)
 
     def spawn_planes(self):
-        return []
+        return glm.array(glm.float32)
 
     def spawn_triangles(self):
-        return []
+        return glm.array(glm.float32)
 
 
 class ExampleSceneLoader(SceneLoader):
@@ -96,22 +175,27 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def define_materials_list(self):
-        arr = []
-
-        for _ in range(200):
-            arr.append(Material(glm.vec3(1.0, 1.0, 1.0), glm.vec3(1.0, 1.0, 1.0)))
-
-        return np.array(arr)
-
+        mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self)
+        mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
+        mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
+        return [mt1, mt2, mt3]
 
     @typing.override
     def spawn_spheres(self):
-        return []
+        return [
+            Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.materials[0]),
+            Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.materials[1]),
+        ]
 
     @typing.override
     def spawn_planes(self):
-        return []
+        return [
+            Plane(0.0, 1.0, 0.0, 2.0, self.materials[2])
+        ]
 
     @typing.override
     def spawn_triangles(self):
-        return []
+        return [
+            Triangle(Vector(-1.0, 0.0, 10.0), Vector(-1.0, 1.0, 11.0),
+                     Vector(3.0, 1.0, 10.0), self.materials[2]),
+        ]

@@ -48,34 +48,26 @@ struct Triangle {
     int material;
 };
 
-#define MATERIALS_MAX_COUNT 10
-#define TRIANGLES_MAX_COUNT 100
-#define SPHERES_MAX_COUNT   10
-#define PLANES_MAX_COUNT    10
-
-uniform uint materialsCount;
-uniform uint spheresCount;
-uniform uint planesCount;
-uniform uint trianglesCount;
-
-layout(std430) buffer MaterialsBlock {
-    Material materials[MATERIALS_MAX_COUNT];
+layout(std430, binding=0) buffer MaterialsBuffer {
+    Material materials[];
 };
 
-layout(std430) buffer PrimitivesBuffer {
-    Sphere spheres[TRIANGLES_MAX_COUNT];
-    Plane planes[SPHERES_MAX_COUNT];
-    Triangle trs[PLANES_MAX_COUNT];
+layout(std430, binding=1) buffer SpheresBuffer {
+    Sphere spheres[];
+};
+
+layout(std430, binding=2) buffer PlanesBuffer {
+    Plane planes[];
+};
+
+layout(std430, binding=3) buffer TrianglesBuffer {
+    Triangle trs[];
 };
 
 struct Reflection {
     Ray ray;
     float dist;
 };
-
-bool isBlackSquare(float x) {
-    return int((x + 0.5) * 55) % 2 == 0;
-}
 
 float castRayWithSky(Ray ray) {
     float[] sunColor = float[](1.0, 1.0, 0.0);
@@ -179,8 +171,8 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
-#define PROCESS_PRIMITIVE(primitives, castFunction, count) \
-    for (int i = 0; i < count; ++i) { \
+#define PROCESS_PRIMITIVE(primitives, castFunction) \
+    for (int i = 0; i < primitives.length(); ++i) { \
         Reflection newrefl = castFunction(ray, primitives[i]); \
         if (newrefl.dist < refl.dist) { \
             refl = newrefl; \
@@ -198,9 +190,9 @@ float castRay(Ray ray) {
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
 
-        PROCESS_PRIMITIVE(spheres, castRayWithSphere, spheresCount);
-        PROCESS_PRIMITIVE(planes, castRayWithPlane, planesCount);
-        PROCESS_PRIMITIVE(trs, castRayWithTriangle, trianglesCount);
+        PROCESS_PRIMITIVE(spheres, castRayWithSphere);
+        PROCESS_PRIMITIVE(planes, castRayWithPlane);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle);
 
         if (refl.dist == INFTY) {
             return res + brightness * castRayWithSky(ray);
