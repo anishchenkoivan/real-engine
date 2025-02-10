@@ -27,6 +27,13 @@ class Vector(typing.NamedTuple):
     z: float
 
 
+class SkyConfig(typing.NamedTuple):
+    sunPosition: Vector
+    sunRadius: float
+    sunColor: Color
+    skyColor: Color
+
+
 class LoadableObject:
     def __init__(self):
         pass
@@ -37,6 +44,7 @@ class LoadableObject:
 
 class Material(LoadableObject):
     def __init__(self, color: Color, refllose: Color, scene_loader):
+        super().__init__()
         self.color = color
         self.refllose = refllose
         self.index = scene_loader.new_material_index()
@@ -51,6 +59,7 @@ class Material(LoadableObject):
 
 class GraphicalPrimitive(LoadableObject):
     def __init__(self, material: Material):
+        super().__init__()
         self.material_index = material.index
 
 
@@ -135,6 +144,8 @@ class SceneLoader(LogicProvider):
         self.load_SSBO(planes, Buffers.PLANES.value)
         self.load_SSBO(triangles, Buffers.TRIANGLES.value)
 
+        self.load_sky_config(self.sky_config())
+
     def load_SSBO(self, data, index):
         if len(data) == 0:
             return
@@ -146,6 +157,20 @@ class SceneLoader(LogicProvider):
         glBufferData(GL_SHADER_STORAGE_BUFFER, size, None, GL_STATIC_DRAW)
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data.ptr)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, ssbo)
+
+    def load_sky_config(self, conf: SkyConfig):
+        glUniform3f(glGetUniformLocation(self.shader.program,
+                    "sunPosition"), conf.sunPosition.x, conf.sunPosition.y, conf.sunPosition.z)
+        glUniform1f(glGetUniformLocation(self.shader.program,
+                    "sunRadius"), conf.sunRadius)
+
+        for i in range(3):
+            glUniform1f(glGetUniformLocation(self.shader.program,
+                        f"sunColor[{i}]"), conf.sunColor[i])
+
+        for i in range(3):
+            glUniform1f(glGetUniformLocation(self.shader.program,
+                        f"skyColor[{i}]"), conf.skyColor[i])
 
     @staticmethod
     def to_glm_array(data: list[LoadableObject]):
@@ -167,6 +192,9 @@ class SceneLoader(LogicProvider):
 
     def spawn_triangles(self):
         return glm.array(glm.float32)
+
+    def sky_config(self):
+        return SkyConfig(Vector(0.4, 0.3, 1.0), 0.05, Color(1.0, 1.0, 0.0), Color(0.67, 0.84, 0.89))
 
 
 class ExampleSceneLoader(SceneLoader):

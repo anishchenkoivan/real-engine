@@ -64,16 +64,18 @@ layout(std430, binding=3) buffer TrianglesBuffer {
     Triangle trs[];
 };
 
+uniform vec3 sunPosition;
+uniform float sunRadius;
+uniform float[3] sunColor;
+uniform float[3] skyColor;
+
 struct Reflection {
     Ray ray;
     float dist;
 };
 
 float castRayWithSky(Ray ray) {
-    float[] sunColor = float[](1.0, 1.0, 0.0);
-    float[] skyColor = float[](0.67, 0.84, 0.89);
-
-    if (distance(ray.dir, normalize(vec3(0.4, 0.3, 1.0))) < 0.05) {
+    if (distance(ray.dir, normalize(sunPosition)) < sunRadius) {
         return sunColor[ray.color];
     }
     return skyColor[ray.color];
