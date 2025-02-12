@@ -23,15 +23,14 @@ struct Ray {
 };
 
 struct Material {
-    float color[3];
-    float refllose[3];
-    float roughness[3];
+    vec3 color;
+    vec3 roughness;
 };
 
 struct Sphere {
     vec3 centre;
     float radius;
-    Material mat;
+    int material;
 };
 
 struct Plane {
@@ -40,7 +39,7 @@ struct Plane {
     float c;
     float d;
 
-    Material mat;
+    int material;
 };
 
 struct Triangle {
@@ -48,17 +47,36 @@ struct Triangle {
     vec3 b;
     vec3 c;
 
-    Material mat;
+    int material;
 };
+
+#define LAYOUT std430
+
+layout(LAYOUT, binding = 0) buffer MaterialsBuffer {
+    Material materials[];
+};
+
+layout(LAYOUT, binding = 1) buffer SpheresBuffer {
+    Sphere spheres[];
+};
+
+layout(LAYOUT, binding = 2) buffer PlanesBuffer {
+    Plane planes[];
+};
+
+layout(LAYOUT, binding = 3) buffer TrianglesBuffer {
+    Triangle trs[];
+};
+
+uniform vec3 sunPosition;
+uniform float sunRadius;
+uniform vec3 sunColor;
+uniform vec3 skyColor;
 
 struct Reflection {
     Ray ray;
     float dist;
 };
-
-bool isBlackSquare(float x) {
-    return int((x + 0.5) * 55) % 2 == 0;
-}
 
 float hash(vec3 seed) {
     return fract(sin(dot(seed, vec3(12.9898, 78.233, 45.164))) * 43758.5453 * rand1);
@@ -72,10 +90,10 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
     float phi = acos(mix(1.0, 2.0 * rand2 - 1.0, roughness));
 
     vec3 randDir = vec3(
-        sin(phi) * cos(theta),
-        sin(phi) * sin(theta),
-        cos(phi)
-    );
+            sin(phi) * cos(theta),
+            sin(phi) * sin(theta),
+            cos(phi)
+        );
 
     vec3 perfectReflection = reflect(incidentDir, normal);
 
@@ -84,20 +102,16 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
     vec3 bitangent = cross(perfectReflection, tangent);
 
     vec3 randomReflection = normalize(
-        tangent * randDir.x + 
-        bitangent * randDir.y + 
-        perfectReflection * randDir.z
-    );
+            tangent * randDir.x +
+                bitangent * randDir.y +
+                perfectReflection * randDir.z
+        );
 
     return normalize(mix(perfectReflection, randomReflection, roughness));
 }
 
-
 float castRayWithSky(Ray ray) {
-    float[] sunColor = float[](1.0, 1.0, 0.0);
-    float[] skyColor = float[](0.67, 0.84, 0.89);
-
-    if (distance(ray.dir, normalize(vec3(0.4, 0.3, 1.0))) < 0.05) {
+    if (distance(ray.dir, normalize(sunPosition)) < sunRadius) {
         return sunColor[ray.color];
     }
     return skyColor[ray.color];
@@ -119,7 +133,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 refvector = diffusedReflection(normal, ray.dir, plane.mat.roughness[ray.color], ray.start);
+    vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
@@ -153,7 +167,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = diffusedReflection(normal, ray.dir, tr.mat.roughness[ray.color], ray.start);
+        vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness[ray.color], ray.start);
         vec3 intersection = ray.start + ray.dir * t;
         return Reflection(Ray(intersection, reflection, ray.color), dist);
     }
@@ -191,67 +205,45 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = diffusedReflection(rvector, ray.dir, sph.mat.roughness[ray.color], ray.start);
+    vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
+#define PROCESS_PRIMITIVE(primitives, castFunction) \
+    for (int i = 0; i < primitives.length(); ++i) { \
+        Reflection newrefl = castFunction(ray, primitives[i]); \
+        if (newrefl.dist < refl.dist) { \
+            refl = newrefl; \
+            material = primitives[i].material; \
+        } \
+    } \
+
 float castRay(Ray ray) {
-    Reflection refl;
-    Material mat;
+    Reflection refl = Reflection(ray, INFTY);
+    int material = 0;
 
-    Material mt1 = Material(float[](1.0, 0.0, 1.0), float[](0.1, 0.1, 0.1), float[](0.05, 0.05, 0.05));
-    Material mt2 = Material(float[](1.0, 0.0, 1.0), float[](0.3, 0.3, 0.3), float[](0.05, 0.05, 0.05));
-    Material mt3 = Material(float[](0.4, 0.4, 0.4), float[](0.4, 0.4, 0.4), float[](0.01, 0.01, 0.01));
-
-    Sphere spheres[] = Sphere[](
-            Sphere(vec3(-2.0, 1.0, 13.0), 1.5, mt1),
-            Sphere(vec3(1.0, -1.2, 13.0), 1.25, mt2)
-        );
-
-    Plane planes[] = Plane[](
-            Plane(0.0, 1.0, 0.0, 2.0, mt3)
-        );
-
-    Triangle trs[] = Triangle[](
-            Triangle(vec3(-1.0, 0.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(3.0, 1.0, 10.0), mt3),
-            Triangle(vec3(-1.0, 1.0, 11.0), vec3(-1.0, 2.0, 10.0), vec3(3.0, 1.0, 10.0), mt3),
-            Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, -1.0, 9.0), vec3(3.0, 1.0, 10.0), mt3),
-            Triangle(vec3(-1.0, -1.0, 9.0), vec3(-1.0, 0.0, 10.0), vec3(3.0, 1.0, 10.0), mt3),
-            Triangle(vec3(-1.0, 2.0, 10.0), vec3(-1.0, 1.0, 11.0), vec3(-1.0, -1.0, 9.0), mt3)
-        );
-
-    float res = 0.0;
-    float brightness = 1.0;
+    float res = 1.0;
 
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
+        material = 0;
 
-        #define PROCESS_PRIMITIVE(primitives, castFunction, count) \
-                    for (int i = 0; i < count; ++i) { \
-                        Reflection newrefl = castFunction(ray, primitives[i]); \
-                        if (newrefl.dist < refl.dist) { \
-                            refl = newrefl; \
-                            mat = primitives[i].mat; \
-                        } \
-                    } \
-
-        PROCESS_PRIMITIVE(spheres, castRayWithSphere, 2);
-        PROCESS_PRIMITIVE(planes, castRayWithPlane, 1);
-        PROCESS_PRIMITIVE(trs, castRayWithTriangle, 5);
-
-        #undef PROCESS_PRIMITIVE
+        PROCESS_PRIMITIVE(spheres, castRayWithSphere);
+        PROCESS_PRIMITIVE(planes, castRayWithPlane);
+        PROCESS_PRIMITIVE(trs, castRayWithTriangle);
 
         if (refl.dist == INFTY) {
-            return res + brightness * castRayWithSky(ray);
+            return res * castRayWithSky(ray);
         }
         ray = refl.ray;
 
-        res = brightness * mat.color[ray.color] * mat.refllose[ray.color];
-        brightness *= 1.0 - mat.refllose[ray.color];
+        res *= materials[material].color[ray.color];
     }
 
-    return res / brightness;
+    return res;
 }
+
+#undef PROCESS_PRIMITIVE
 
 vec4 getColor(vec3 camera, vec3 dir) {
     vec4 res = vec4(0.0, 0.0, 0.0, 1.0);

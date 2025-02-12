@@ -1,5 +1,6 @@
-import simplesphere
+import shader
+import demo
 
 
 if __name__ == "__main__":
-    simplesphere.main()
+    shader.main(demo.ExampleSceneLoader)
