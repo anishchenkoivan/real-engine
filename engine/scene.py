@@ -92,15 +92,15 @@ class GraphicalPrimitive(LoadableObject):
 
 
 class Sphere(GraphicalPrimitive):
-    def __init__(self, centre: Vector, radius, material: Material):
+    def __init__(self, center: Vector, radius, material: Material):
         super().__init__(material)
-        self.centre = centre
+        self.center = center
         self.radius = radius
 
     @typing.override
     def as_array(self):
         return [
-            self.centre.x, self.centre.y, self.centre.z,
+            self.center.x, self.center.y, self.center.z,
             self.radius, self.material_index, None, None, None
         ]
 
