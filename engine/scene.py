@@ -1,4 +1,3 @@
-from collections import namedtuple
 import typing
 from enum import Enum
 from graphics import LogicProvider, ShaderProgram
@@ -8,6 +7,7 @@ import numpy as np
 from OpenGL.GL import *
 from pyglm import glm
 from ctypes import *
+from struct import pack, unpack
 
 
 class Buffers(Enum):
@@ -15,6 +15,23 @@ class Buffers(Enum):
     SPHERES = 1
     PLANES = 2
     TRIANGLES = 3
+
+
+class Converter:
+    @staticmethod
+    def to_int(data):
+        if isinstance(data, int):
+            return data
+        elif isinstance(data, float):
+            data = pack('f', data)
+            return unpack('i', data)[0]
+        else:
+            raise NotImplementedError()
+
+    @staticmethod
+    def to_glm_array(arr):
+        arr = [Converter.to_int(item) for item in arr]
+        return glm.array(glm.int32, *arr)
 
 
 class LoadableObject:
@@ -363,10 +380,9 @@ class SceneLoader(LogicProvider):
         arr = []
 
         for i in data:
-            arr.append(i.as_tuple())
+            arr += i.as_array()
 
-        print(arr)
-        return glm.array(arr)
+        return Converter.to_glm_array(arr)
 
     def define_materials_list(self):
         raise NotImplementedError()
@@ -390,9 +406,9 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def define_materials_list(self):
-        self.mt2 = Material(Color(0.0, 1.0, 0.0), Color(1.0, 1.0, 1.0), self)
-        self.mt1 = Material(Color(0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0), self)
-        self.mt3 = Material(Color(1.0, 0.0, 0.0), Color(1.0, 1.0, 1.0), self)
+        self.mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self);
+        self.mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
         print(self.mt1, self.mt2, self.mt3)
         return [self.mt1, self.mt2, self.mt3]
 
