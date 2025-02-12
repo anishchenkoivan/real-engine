@@ -170,7 +170,6 @@ class Sphere(GraphicalPrimitive):
 
     @typing.override
     def as_array(self):
-        print(self.material_index)
         return [
             self.centre.x, self.centre.y, self.centre.z,
             self.radius, self.material_index, 0.0, 0.0, 0.0
@@ -220,7 +219,6 @@ class Plane(GraphicalPrimitive):
 
     @typing.override
     def as_array(self):
-        print(self.material_index)
         return [
             self.a, self.b, self.c, self.d,
             self.material_index,
@@ -279,7 +277,6 @@ class Triangle(GraphicalPrimitive):
 
     @typing.override
     def as_array(self):
-        print(self.material_index)
         return [
             self.a.x, self.a.y, self.a.z, 0,
             self.b.x, self.b.y, self.b.z, 0,
@@ -409,7 +406,6 @@ class ExampleSceneLoader(SceneLoader):
         self.mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self);
         self.mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
         self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
-        print(self.mt1, self.mt2, self.mt3)
         return [self.mt1, self.mt2, self.mt3]
 
     @typing.override
