@@ -4,6 +4,7 @@ import config
 import engine
 import typing
 from scene import *
+import random
 
 
 def main():
@@ -37,9 +38,9 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def define_materials_list(self):
-        self.mt2 = Material(Color(1.0, 0.0, 1.0), Color(0.1, 0.1, 0.1), self)
-        self.mt1 = Material(Color(1.0, 0.0, 1.0), Color(0.3, 0.3, 0.3), self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.4, 0.4, 0.4), self)
+        self.mt1 = Material(Color(0.9, 0.0, 0.0), Color(0.0, 0.0, 0.0), self)
+        self.mt2 = Material(Color(0.9, 0.9, 0.9), Color(0.5, 0.5, 0.5), self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.2, 0.2, 0.2), self)
         return [self.mt1, self.mt2, self.mt3]
 
     @typing.override
@@ -70,6 +71,10 @@ class ExampleSceneLoader(SceneLoader):
                      Vector(-1.0, -1.0, 9.0), self.mt3)
         ]
 
+#     @typing.override
+#     def sky_config(self):
+#         return SkyConfig(Vector(0.4, 0.3, 1.0), 0.05, Color(1.0, 1.0, 0.0), Color(0.89, 0.89, 0.89))
+
 
 class SimpleSphereLogicProvider(LogicProvider):
     def __init__(self, shader: ShaderProgram):
@@ -80,7 +85,11 @@ class SimpleSphereLogicProvider(LogicProvider):
     def render(self):
         self.scene_loader.render()
         glUniform2f(glGetUniformLocation(self.shader.program,
-                    "resolution"), config.RESOLUTION[0], config.RESOLUTION[1])
+                                         "resolution"), config.RESOLUTION[0], config.RESOLUTION[1])
+        glUniform1f(glGetUniformLocation(
+            self.shader.program, "rand1"), random.random())
+        glUniform1f(glGetUniformLocation(
+            self.shader.program, "rand2"), random.random())
 
 
 class VerticesMesh(Mesh):

@@ -49,7 +49,7 @@ class Vector(LoadableObject):
 
     @typing.override
     def as_array(self):
-        return [self.x, self.y, self.z, 0.0]
+        return [self.x, self.y, self.z, None]
 
 
 class Color(Vector):
@@ -101,7 +101,8 @@ class Sphere(GraphicalPrimitive):
     def as_array(self):
         return [
             self.center.x, self.center.y, self.center.z,
-            self.radius, self.material_index, None, None, None
+            self.radius, self.material_index,
+            None, None, None # padding
         ]
 
 
@@ -118,7 +119,7 @@ class Plane(GraphicalPrimitive):
         return [
             self.a, self.b, self.c, self.d,
             self.material_index,
-            0, 0, 0  # padding
+            None, None, None  # padding
         ]
 
 

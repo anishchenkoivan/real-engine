@@ -4,6 +4,8 @@ out vec4 color;
 uniform vec2 resolution;
 uniform mat3 rotationMatrix = mat3(1.0);
 uniform vec3 position = vec3(0.0, 0.0, -1.0);
+uniform float rand1;
+uniform float rand2;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
@@ -22,7 +24,7 @@ struct Ray {
 
 struct Material {
     vec3 color;
-    vec3 refllose;
+    vec3 roughness;
 };
 
 struct Sphere {
@@ -76,6 +78,38 @@ struct Reflection {
     float dist;
 };
 
+float hash(vec3 seed) {
+    return fract(sin(dot(seed, vec3(12.9898, 78.233, 45.164))) * 43758.5453 * rand1);
+}
+
+vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 rayOrigin) {
+    float rand1 = hash(rayOrigin + incidentDir);
+    float rand2 = hash(rayOrigin - incidentDir);
+
+    float theta = 2.0 * 3.14159265359 * rand1;
+    float phi = acos(mix(1.0, 2.0 * rand2 - 1.0, roughness));
+
+    vec3 randDir = vec3(
+            sin(phi) * cos(theta),
+            sin(phi) * sin(theta),
+            cos(phi)
+        );
+
+    vec3 perfectReflection = reflect(incidentDir, normal);
+
+    vec3 up = abs(perfectReflection.y) < 0.999 ? vec3(0, 1, 0) : vec3(1, 0, 0);
+    vec3 tangent = normalize(cross(up, perfectReflection));
+    vec3 bitangent = cross(perfectReflection, tangent);
+
+    vec3 randomReflection = normalize(
+            tangent * randDir.x +
+                bitangent * randDir.y +
+                perfectReflection * randDir.z
+        );
+
+    return normalize(mix(perfectReflection, randomReflection, roughness));
+}
+
 float castRayWithSky(Ray ray) {
     if (distance(ray.dir, normalize(sunPosition)) < sunRadius) {
         return sunColor[ray.color];
@@ -99,7 +133,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 refvector = reflect(ray.dir, normal);
+    vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
@@ -133,7 +167,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = reflect(ray.dir, normal);
+        vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness[ray.color], ray.start);
         vec3 intersection = ray.start + ray.dir * t;
         return Reflection(Ray(intersection, reflection, ray.color), dist);
     }
@@ -171,7 +205,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = reflect(ray.dir, rvector);
+    vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness[ray.color], ray.start);
     return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
 }
 
@@ -188,8 +222,7 @@ float castRay(Ray ray) {
     Reflection refl = Reflection(ray, INFTY);
     int material = 0;
 
-    float res = 0.0;
-    float brightness = 1.0;
+    float res = 1.0;
 
     for (int i = 0; i < 10; ++i) {
         refl.dist = INFTY;
@@ -200,15 +233,14 @@ float castRay(Ray ray) {
         PROCESS_PRIMITIVE(trs, castRayWithTriangle);
 
         if (refl.dist == INFTY) {
-            return res + brightness * castRayWithSky(ray);
+            return res * castRayWithSky(ray);
         }
         ray = refl.ray;
 
-        res = brightness * materials[material].color[ray.color] * materials[material].refllose[ray.color];
-        brightness *= 1.0 - materials[material].refllose[ray.color];
+        res *= materials[material].color[ray.color];
     }
 
-    return res / brightness;
+    return res;
 }
 
 #undef PROCESS_PRIMITIVE
