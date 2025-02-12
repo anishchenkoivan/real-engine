@@ -7,9 +7,9 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def define_materials_list(self):
-        self.mt1 = Material(Color(0.9, 0.0, 0.0), Color(0.0, 0.0, 0.0), self)
-        self.mt2 = Material(Color(0.9, 0.9, 0.9), Color(0.5, 0.5, 0.5), self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), Color(0.2, 0.2, 0.2), self)
+        self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.0, self)
+        self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.5, self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.5, self)
         return [self.mt1, self.mt2, self.mt3]
 
     @typing.override

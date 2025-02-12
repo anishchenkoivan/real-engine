@@ -20,11 +20,14 @@ struct Ray {
     vec3 start;
     vec3 dir;
     int color;
+    float opticalDensity;
 };
 
 struct Material {
     vec3 color;
-    vec3 roughness;
+    float roughness;
+    float opticalDensity;
+    bool transparent;
 };
 
 struct Sphere {
@@ -110,6 +113,13 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
     return normalize(mix(perfectReflection, randomReflection, roughness));
 }
 
+vec3 advancedReflection(Ray ray, Material material, vec3 normal) {
+    if (material.transparent) {
+        return normalize(refract(ray.dir, normal, ray.opticalDensity / material.opticalDensity));
+    }
+    return diffusedReflection(normal, ray.dir, material.roughness, ray.start);
+}
+
 float castRayWithSky(Ray ray) {
     if (distance(ray.dir, normalize(sunPosition)) < sunRadius) {
         return sunColor[ray.color];
@@ -133,8 +143,8 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness[ray.color], ray.start);
-    return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
+    vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness, ray.start);
+    return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity), t * length(ray.dir));
 }
 
 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -167,9 +177,9 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness[ray.color], ray.start);
+        vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness, ray.start);
         vec3 intersection = ray.start + ray.dir * t;
-        return Reflection(Ray(intersection, reflection, ray.color), dist);
+        return Reflection(Ray(intersection, reflection, ray.color, ray.opticalDensity), dist);
     }
     else // This means that there is a line intersection but not a ray intersection.
         return Reflection(ray, INFTY);
@@ -205,8 +215,8 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness[ray.color], ray.start);
-    return Reflection(Ray(intersection, refvector, ray.color), t * length(ray.dir));
+    vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness, ray.start);
+    return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity), t * length(ray.dir));
 }
 
 #define PROCESS_PRIMITIVE(primitives, castFunction) \
@@ -248,7 +258,7 @@ float castRay(Ray ray) {
 vec4 getColor(vec3 camera, vec3 dir) {
     vec4 res = vec4(0.0, 0.0, 0.0, 1.0);
 
-    Ray ray = Ray(camera, dir, COLOR_RED);
+    Ray ray = Ray(camera, dir, COLOR_RED, 1.0);
     res.x = castRay(ray);
 
     ray.color = COLOR_GREEN;

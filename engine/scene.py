@@ -24,6 +24,8 @@ class Converter:
         if isinstance(data, float):
             data = pack('f', data)
             return unpack('i', data)[0]
+        if isinstance(data, bool):
+            return int(data)
 
         raise NotImplementedError()
 
@@ -70,17 +72,22 @@ class Color(Vector):
 
 
 class Material(LoadableObject):
-    def __init__(self, color: Color, refllose: Color, scene_loader):
+    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1):
         super().__init__()
         self.color = color
-        self.refllose = refllose
+        self.roughness = roughness
+        self.transparent = transparent
+        self.optical_density = optical_density
         self.index = scene_loader.new_material_index()
 
     @typing.override
     def as_array(self):
         res = [
             self.color.red, self.color.green, self.color.blue, None,
-            self.refllose.red, self.refllose.green, self.refllose.blue, None,
+            self.roughness,
+            self.optical_density,
+            self.transparent,
+            None,
         ]
         return res
 
