@@ -1,5 +1,5 @@
 from scene import *
-
+from model_parser import triangulate;
 
 class ExampleSceneLoader(SceneLoader):
     def __init__(self, shader_program: ShaderProgram):
@@ -37,7 +37,8 @@ class ExampleSceneLoader(SceneLoader):
             Triangle(Vector(-1.0, -1.0, 9.0), Vector(-1.0, 0.0, 10.0),
                      Vector(3.0, 1.0, 10.0), self.mt3),
             Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, 1.0, 11.0),
-                     Vector(-1.0, -1.0, 9.0), self.mt3)
+                     Vector(-1.0, -1.0, 9.0), self.mt3),
+            *triangulate("../shrek/models/shrek.fbx", 0, 0, 100, self.mt3)
         ]
 
 
