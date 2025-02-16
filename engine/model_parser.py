@@ -1,35 +1,55 @@
-import pyassimp
+import pymeshlab
 from scene import Triangle, Vector
 
+
 def triangulate(filePath, centerX, centerY, modelHeight, material):
-    with pyassimp.load(filePath, processing=pyassimp.postprocess.aiProcess_Triangulate) as scene:
-        if not scene.meshes:
-            raise ValueError("Unable to parse the file")
+    mesh_set = pymeshlab.MeshSet()
+    mesh_set.load_new_mesh(filePath)
 
-        triangles = []
-        maxZ = -float("inf")
-        minZ = float("inf")
+    mesh_obj = mesh_set.mesh(0)
 
-        for mesh in scene.meshes:
-            for face in mesh.faces:
-                if len(face) == 3:
-                    v1, v2, v3 = mesh.vertices[face[0]], mesh.vertices[face[1]], mesh.vertices[face[2]]
+    triangles = mesh_obj.face_matrix()
 
-                    maxZ = max(maxZ, v1[2], v2[2], v3[2])
-                    minZ = min(minZ, v1[2], v2[2], v3[2])
+    vertices = mesh_obj.vertex_matrix()
 
-                    triangles.append((v1, v2, v3))
+    maxZ = -float("inf")
+    minZ = float("inf")
 
-        height = maxZ - minZ
-        scale = modelHeight / height if height != 0 else 1
+    triangle_list = []
 
-        convertedTriangles = []
+    for triangle in triangles:
+        v1, v2, v3 = triangle
 
-        for v1, v2, v3 in triangles:
-            v1 = Vector(v1[0] * scale + centerX, v1[1] * scale + centerY, v1[2] * scale)
-            v2 = Vector(v2[0] * scale + centerX, v2[1] * scale + centerY, v2[2] * scale)
-            v3 = Vector(v3[0] * scale + centerX, v3[1] * scale + centerY, v3[2] * scale)
+        v1_coords = vertices[v1]
+        v2_coords = vertices[v2]
+        v3_coords = vertices[v3]
 
-            convertedTriangles.append(Triangle(v1, v2, v3, material))
+        maxZ = max(maxZ, v1_coords[2], v2_coords[2], v3_coords[2])
+        minZ = min(minZ, v1_coords[2], v2_coords[2], v3_coords[2])
 
-        return convertedTriangles
+        triangle_list.append((v1_coords, v2_coords, v3_coords))
+
+    height = maxZ - minZ
+    scale = modelHeight / height if height != 0 else 1
+
+    converted_triangles = []
+    for v1_coords, v2_coords, v3_coords in triangle_list:
+        v1 = Vector(
+            float(v1_coords[0] * scale + centerX),
+            float(v1_coords[1] * scale + centerY),
+            float(v1_coords[2] * scale),
+        )
+        v2 = Vector(
+            float(v2_coords[0] * scale + centerX),
+            float(v2_coords[1] * scale + centerY),
+            float(v2_coords[2] * scale),
+        )
+        v3 = Vector(
+            float(v3_coords[0] * scale + centerX),
+            float(v3_coords[1] * scale + centerY),
+            float(v3_coords[2] * scale),
+        )
+
+        converted_triangles.append(Triangle(v1, v2, v3, material))
+
+    return converted_triangles
