@@ -2,3 +2,4 @@ pygame
 pyopengl
 numpy
 PyGLM
+pymeshlab

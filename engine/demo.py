@@ -1,4 +1,5 @@
 from scene import *
+from model_parser import triangulate
 
 
 class ExampleSceneLoader(SceneLoader):
@@ -21,23 +22,40 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def spawn_planes(self):
-        return [
-            Plane(0.0, 1.0, 0.0, 2.0, self.mt3)
-        ]
+        return [Plane(0.0, 1.0, 0.0, 2.0, self.mt3)]
 
     @typing.override
     def spawn_triangles(self):
         return [
-            Triangle(Vector(-1.0, 0.0, 10.0), Vector(-1.0, 1.0, 11.0),
-                     Vector(3.0, 1.0, 10.0), self.mt3),
-            Triangle(Vector(-1.0, 1.0, 11.0), Vector(-1.0, 2.0, 10.0),
-                     Vector(3.0, 1.0, 10.0), self.mt3),
-            Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, -1.0, 9.0),
-                     Vector(3.0, 1.0, 10.0), self.mt3),
-            Triangle(Vector(-1.0, -1.0, 9.0), Vector(-1.0, 0.0, 10.0),
-                     Vector(3.0, 1.0, 10.0), self.mt3),
-            Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, 1.0, 11.0),
-                     Vector(-1.0, -1.0, 9.0), self.mt3)
+            Triangle(
+                Vector(-1.0, 0.0, 10.0),
+                Vector(-1.0, 1.0, 11.0),
+                Vector(3.0, 1.0, 10.0),
+                self.mt3,
+            ),
+            Triangle(
+                Vector(-1.0, 1.0, 11.0),
+                Vector(-1.0, 2.0, 10.0),
+                Vector(3.0, 1.0, 10.0),
+                self.mt3,
+            ),
+            Triangle(
+                Vector(-1.0, 2.0, 10.0),
+                Vector(-1.0, -1.0, 9.0),
+                Vector(3.0, 1.0, 10.0),
+                self.mt3,
+            ),
+            Triangle(
+                Vector(-1.0, -1.0, 9.0),
+                Vector(-1.0, 0.0, 10.0),
+                Vector(3.0, 1.0, 10.0),
+                self.mt3,
+            ),
+            Triangle(
+                Vector(-1.0, 2.0, 10.0),
+                Vector(-1.0, 1.0, 11.0),
+                Vector(-1.0, -1.0, 9.0),
+                self.mt3,
+            ),
+            *triangulate("../models/shrek.obj", 0, 0, 100, self.mt3),
         ]
-
-
