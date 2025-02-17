@@ -80,7 +80,7 @@ layout(LAYOUT, binding = 3) buffer TrianglesBuffer {
 };
 
 layout (LAYOUT, binding = 4) buffer LensesBuffer {
-    Lens lns[];
+    Lens lenses[];
 };
 
 uniform vec3 sunPosition;
@@ -243,7 +243,6 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 }
 
 Reflection castRayWithLens(Ray ray, Lens lens) {
-    // Sphere intersection
     vec3 OC = ray.start - lens.sphere.centre;
     float k1 = dot(ray.dir, ray.dir);
     float k2 = 2.0 * dot(OC, ray.dir);
@@ -311,8 +310,7 @@ float castRay(Ray ray) {
         PROCESS_PRIMITIVE(spheres, castRayWithSphere);
         PROCESS_PRIMITIVE(planes, castRayWithPlane);
         PROCESS_PRIMITIVE(trs, castRayWithTriangle);
-        PROCESS_PRIMITIVE(lns, castRayWithLens);
-//        refl = castRayWithLens(ray, lns[0]);
+        PROCESS_PRIMITIVE(lenses, castRayWithLens);
 
         if (refl.dist == INFTY) {
             return res * castRayWithSky(ray);
