@@ -115,7 +115,9 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
 
 vec3 advancedReflection(Ray ray, Material material, vec3 normal) {
     if (material.transparent) {
-        return normalize(refract(ray.dir, normal, ray.opticalDensity / material.opticalDensity));
+        // return normalize(refract(ray.dir, normal, ray.opticalDensity / material.opticalDensity));
+        return normalize(refract(normalize(ray.dir), normalize(normal), 1.0));
+        // return normalize(ray.dir);
     }
     return diffusedReflection(normal, ray.dir, material.roughness, ray.start);
 }
@@ -143,7 +145,8 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness, ray.start);
+    // vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness, ray.start);
+    vec3 refvector = advancedReflection(ray, materials[plane.material], normal);
     return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity), t * length(ray.dir));
 }
 
@@ -177,7 +180,8 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness, ray.start);
+        // vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness, ray.start);
+        vec3 reflection = advancedReflection(ray, materials[tr.material], normal);
         vec3 intersection = ray.start + ray.dir * t;
         return Reflection(Ray(intersection, reflection, ray.color, ray.opticalDensity), dist);
     }
@@ -215,7 +219,8 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness, ray.start);
+    // vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness, ray.start);
+    vec3 refvector = advancedReflection(ray, materials[sph.material], rvector);
     return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity), t * length(ray.dir));
 }
 
@@ -248,6 +253,7 @@ float castRay(Ray ray) {
         ray = refl.ray;
 
         res *= materials[material].color[ray.color];
+        ray.opticalDensity = materials[material].opticalDensity;
     }
 
     return res;
@@ -278,4 +284,13 @@ void main() {
     vec3 dir = normalize(vec3(uv, 1.0));
     dir = rotationMatrix * dir;
     color = getColor(camera, dir);
+    // for (int i = 0; i < materials.length(); i++) {
+    //     if (materials[i].transparent) {
+    //         color = vec4(0, 0, 1, 1);
+    //     }
+    // }
+    // vec3 normalizedVector = normalize(vec3(1, 2, 3));
+    // if (normalizedVector != normalize(refract(normalizedVector, normalize(vec3(1, 1, 1)), 1.0))) {
+    //     color = vec4(1, 0, 0, 1);
+    // }
 }

@@ -25,7 +25,7 @@ class Converter:
             data = pack('f', data)
             return unpack('i', data)[0]
         if isinstance(data, bool):
-            return int(data)
+            return float(data)
 
         raise NotImplementedError()
 
@@ -83,11 +83,11 @@ class Material(LoadableObject):
     @typing.override
     def as_array(self):
         res = [
-            self.color.red, self.color.green, self.color.blue, None,
+            self.color.red, self.color.green, self.color.blue,
             self.roughness,
             self.optical_density,
             self.transparent,
-            None,
+            None, None
         ]
         return res
 

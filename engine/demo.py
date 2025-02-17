@@ -8,15 +8,17 @@ class ExampleSceneLoader(SceneLoader):
     @typing.override
     def define_materials_list(self):
         self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.0, self)
-        self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.5, self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.5, self)
-        return [self.mt1, self.mt2, self.mt3]
+        self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.0, self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.0, self)
+        self.mt4 = Material(Color(0.1, 0.8, 0.1), 0.0, self, transparent=True, optical_density=1.0)
+        return [self.mt1, self.mt2, self.mt3, self.mt4]
 
     @typing.override
     def spawn_spheres(self):
         return [
             Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.mt1),
             Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.mt2),
+            Sphere(Vector(0.0, 1.0, 7.0), 1.25, self.mt4)
         ]
 
     @typing.override
