@@ -7,10 +7,10 @@ class ExampleSceneLoader(SceneLoader):
 
     @typing.override
     def define_materials_list(self):
-        self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.0, self)
-        self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.0, self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.0, self)
-        self.mt4 = Material(Color(0.1, 0.8, 0.1), 0.0, self, transparent=True, optical_density=1.0)
+        self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.02, self)
+        self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.02, self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.02, self)
+        self.mt4 = Material(Color(0.8, 0.8, 0.9), 0.0, self, transparent=True, optical_density=2.0)
         return [self.mt1, self.mt2, self.mt3, self.mt4]
 
     @typing.override
@@ -18,7 +18,7 @@ class ExampleSceneLoader(SceneLoader):
         return [
             Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.mt1),
             Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.mt2),
-            Sphere(Vector(0.0, 1.0, 7.0), 1.25, self.mt4)
+            # Sphere(Vector(0.0, 1.0, 7.0), 1.25, self.mt4)
         ]
 
     @typing.override
@@ -40,8 +40,20 @@ class ExampleSceneLoader(SceneLoader):
                      Vector(3.0, 1.0, 10.0), self.mt3),
             Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, 1.0, 11.0),
                      Vector(-1.0, -1.0, 9.0), self.mt3),
-            Triangle(Vector(0.0, 1.0, 12.0), Vector(5.0, 1.0, 12.0),
-                     Vector(0.0, 5.0, 12.0), self.mt4),
+            # Triangle(Vector(0.0, 1.0, 6.0), Vector(5.0, 1.0, 6.0),
+            #          Vector(0.0, 5.0, 6.0), self.mt4),
+            # Triangle(Vector(0.0, 1.0, 6.5), Vector(5.0, 1.0, 6.5),
+            #          Vector(0.0, 5.0, 6.5), self.mt4),
         ]
 
+    @typing.override
+    def spawn_lenses(self):
+        return [
+            Lense(
+                Sphere(Vector(1.0, 1.0, 1.0), 1.0, self.mt1),
+                Plane(0.0, 1.0, 0.0, -1.0, self.mt3),
+                self.mt3,
+                Vector(0.0, 1.0, 0.0),
+            )
+        ]
 

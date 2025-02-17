@@ -12,6 +12,7 @@ class Buffers(Enum):
     SPHERES = 1
     PLANES = 2
     TRIANGLES = 3
+    LENSES = 4
 
 
 class Converter:
@@ -147,6 +148,18 @@ class Triangle(GraphicalPrimitive):
         ]
 
 
+class Lense(GraphicalPrimitive):
+    def __init__(self, sphere: Sphere, plane: Plane, material: Material, direction: Vector):
+        super().__init__(material)
+        self.sphere = sphere
+        self.plane = plane
+        self.direction = direction
+
+    @typing.override
+    def as_array(self):
+        return self.sphere.as_array() + self.plane.as_array() + [self.material_index] + self.direction.as_array()
+
+
 class SkyConfig(typing.NamedTuple):
     sunPosition: Vector
     sunRadius: float
@@ -180,11 +193,13 @@ class SceneLoader(LogicProvider):
         spheres = self.spawn_spheres()
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
+        lenses = self.spawn_lenses()
 
         self.load_SSBO(self.materials, Buffers.MATERIAlS.value)
         self.load_SSBO(spheres, Buffers.SPHERES.value)
         self.load_SSBO(planes, Buffers.PLANES.value)
         self.load_SSBO(triangles, Buffers.TRIANGLES.value)
+        self.load_SSBO(lenses, Buffers.LENSES.value)
 
         self.load_sky_config(self.sky_config())
 
@@ -233,6 +248,9 @@ class SceneLoader(LogicProvider):
         return glm.array(glm.float32)
 
     def spawn_triangles(self):
+        return glm.array(glm.float32)
+
+    def spawn_lenses(self):
         return glm.array(glm.float32)
 
     def sky_config(self):
