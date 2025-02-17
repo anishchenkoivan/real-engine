@@ -39,7 +39,9 @@ class ExampleSceneLoader(SceneLoader):
             Triangle(Vector(-1.0, -1.0, 9.0), Vector(-1.0, 0.0, 10.0),
                      Vector(3.0, 1.0, 10.0), self.mt3),
             Triangle(Vector(-1.0, 2.0, 10.0), Vector(-1.0, 1.0, 11.0),
-                     Vector(-1.0, -1.0, 9.0), self.mt3)
+                     Vector(-1.0, -1.0, 9.0), self.mt3),
+            Triangle(Vector(0.0, 1.0, 12.0), Vector(5.0, 1.0, 12.0),
+                     Vector(0.0, 5.0, 12.0), self.mt4),
         ]
 
 

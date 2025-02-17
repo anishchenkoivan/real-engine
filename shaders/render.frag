@@ -115,9 +115,10 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
 
 vec3 advancedReflection(Ray ray, Material material, vec3 normal) {
     if (material.transparent) {
-        // return normalize(refract(ray.dir, normal, ray.opticalDensity / material.opticalDensity));
-        return normalize(refract(normalize(ray.dir), normalize(normal), 1.0));
-        // return normalize(ray.dir);
+        if (dot(ray.dir, normal) > 0.0) {
+            normal = -normal;
+        }
+        return normalize(refract(ray.dir, normal, ray.opticalDensity / material.opticalDensity));
     }
     return diffusedReflection(normal, ray.dir, material.roughness, ray.start);
 }
