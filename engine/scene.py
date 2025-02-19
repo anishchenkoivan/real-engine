@@ -73,12 +73,13 @@ class Color(Vector):
 
 
 class Material(LoadableObject):
-    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1):
+    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1, dispersion_coefficient: float = 0.01):
         super().__init__()
         self.color = color
         self.roughness = roughness
         self.transparent = transparent
         self.optical_density = optical_density
+        self.dispersion_coefficient = dispersion_coefficient
         self.index = scene_loader.new_material_index()
 
     @typing.override
@@ -88,7 +89,8 @@ class Material(LoadableObject):
             self.roughness,
             self.optical_density,
             self.transparent,
-            None, None
+            self.dispersion_coefficient,
+            None
         ]
         return res
 
