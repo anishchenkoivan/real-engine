@@ -88,7 +88,6 @@ uniform vec3 sunColor;
 uniform vec3 skyColor;
 
 struct Reflection {
-    // Ray ray;
     vec3 intersection;
     vec3 normal;
     float dist;
