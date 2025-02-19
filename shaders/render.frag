@@ -16,6 +16,8 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
+const float colorDispersionFactor[3] = float[3](-0.2, 1.0, 0.2);
+
 struct Ray {
     vec3 start;
     vec3 dir;
@@ -29,6 +31,7 @@ struct Material {
     float roughness;
     float opticalDensity;
     bool transparent;
+    float dispersionCoefficient;
 };
 
 struct Sphere {
@@ -135,7 +138,8 @@ vec3 reflectOrRefract(inout Ray ray, Material material, vec3 normal) {
         if (dot(ray.dir, normal) > 0.0) {
             normal = -normal;
         }
-        float theta = ray.opticalDensity / material.opticalDensity;
+        float colorMaterialOpticalDensity = material.opticalDensity + material.dispersionCoefficient * colorDispersionFactor[ray.color];
+        float theta = ray.opticalDensity / colorMaterialOpticalDensity;
         if (ray.isInside) {
             theta = 1 / theta;
             ray.opticalDensity = 1;
