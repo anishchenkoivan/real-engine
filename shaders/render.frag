@@ -78,7 +78,7 @@ layout(LAYOUT, binding = 3) buffer TrianglesBuffer {
     Triangle trs[];
 };
 
-layout (LAYOUT, binding = 4) buffer LensesBuffer {
+layout(LAYOUT, binding = 4) buffer LensesBuffer {
     Lens lenses[];
 };
 
@@ -88,9 +88,16 @@ uniform vec3 sunColor;
 uniform vec3 skyColor;
 
 struct Reflection {
-    Ray ray;
+    // Ray ray;
+    vec3 intersection;
+    vec3 normal;
     float dist;
 };
+#define NONE_REFLECTION Reflection(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), INFTY)
+
+Reflection new_reflection(Ray ray, vec3 normal, float t) {
+    return Reflection(ray.start + ray.dir * t, normal, length(ray.dir) * t);
+}
 
 float hash(vec3 seed) {
     return fract(sin(dot(seed, vec3(12.9898, 78.233, 45.164))) * 43758.5453 * rand1);
@@ -154,19 +161,16 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
     float denom = dot(normal, ray.dir);
 
     if (abs(denom) < EPS) {
-        return Reflection(ray, INFTY);
+        return NONE_REFLECTION;
     }
 
     float t = -(dot(normal, ray.start) + plane.d) / denom;
 
     if (t < EPS) {
-        return Reflection(ray, INFTY);
+        return NONE_REFLECTION;
     }
 
-    vec3 intersection = ray.start + ray.dir * t;
-
-    vec3 refvector = reflectOrRefract(ray, materials[plane.material], normal);
-    return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
+    return new_reflection(ray, normal, t);
 }
 
 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -176,34 +180,35 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     vec3 ray_cross_e2 = cross(ray.dir, edge2);
     float det = dot(edge1, ray_cross_e2);
 
-    if (det > -EPS && det < EPS)
-        return Reflection(ray, INFTY);
+    if (det > -EPS && det < EPS) {
+        return NONE_REFLECTION;
+    }
 
     float inv_det = 1.0 / det;
     vec3 s = ray.start - tr.a;
     float u = inv_det * dot(s, ray_cross_e2);
 
-    if ((u < 0 && abs(u) > EPS) || (u > 1 && abs(u - 1) > EPS))
-        return Reflection(ray, INFTY);
+    if ((u < 0 && abs(u) > EPS) || (u > 1 && abs(u - 1) > EPS)) {
+        return NONE_REFLECTION;
+    }
 
     vec3 s_cross_e1 = cross(s, edge1);
     float v = inv_det * dot(ray.dir, s_cross_e1);
 
-    if ((v < 0 && abs(v) > EPS) || (u + v > 1 && abs(u + v - 1) > EPS))
-        return Reflection(ray, INFTY);
+    if ((v < 0 && abs(v) > EPS) || (u + v > 1 && abs(u + v - 1) > EPS)) {
+        return NONE_REFLECTION;
+    }
 
     float t = inv_det * dot(edge2, s_cross_e1);
 
     if (t > EPS) // ray intersection
     {
-        float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        vec3 reflection = reflectOrRefract(ray, materials[tr.material], normal);
-        vec3 intersection = ray.start + ray.dir * t;
-        return Reflection(Ray(intersection, reflection, ray.color, ray.opticalDensity, ray.isInside), dist);
+        return new_reflection(ray, normal, t);
     }
-    else // This means that there is a line intersection but not a ray intersection.
-        return Reflection(ray, INFTY);
+    else { // This means that there is a line intersection but not a ray intersection.
+        return NONE_REFLECTION;
+    }
 }
 
 Reflection castRayWithSphere(Ray ray, Sphere sph) {
@@ -214,7 +219,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
     float discr = k2 * k2 - 4 * k1 * k3;
 
     if (discr <= 0) {
-        return Reflection(ray, INFTY);
+        return NONE_REFLECTION;
     }
 
     discr = sqrt(discr);
@@ -229,15 +234,14 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     if (t_min < EPS) {
         if (t_max < EPS) {
-            return Reflection(ray, INFTY);
+            return NONE_REFLECTION;
         }
         t = t_max;
     }
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    vec3 refvector = reflectOrRefract(ray, materials[sph.material], rvector);
-    return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
+    return new_reflection(ray, rvector, t);
 }
 
 Reflection castRayWithLens(Ray ray, Lens lens) {
@@ -248,7 +252,7 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
     float discr = k2 * k2 - 4.0 * k1 * k3;
 
     if (discr <= 0.0) {
-        return Reflection(ray, INFTY);
+        return NONE_REFLECTION;
     }
 
     discr = sqrt(discr);
@@ -279,13 +283,11 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
     }
 
     if (t == INFTY) {
-        return Reflection(ray, INFTY);
+        return NONE_REFLECTION;
     }
 
-    vec3 refvector = reflectOrRefract(ray, materials[lens.material], normal);
-    return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
+    return new_reflection(ray, normal, t);
 }
-
 
 #define PROCESS_PRIMITIVE(primitives, castFunction) \
     for (int i = 0; i < primitives.length(); ++i) { \
@@ -297,7 +299,7 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
     } \
 
 float castRay(Ray ray) {
-    Reflection refl = Reflection(ray, INFTY);
+    Reflection refl = NONE_REFLECTION;
     int material = 0;
 
     float res = 1.0;
@@ -314,8 +316,9 @@ float castRay(Ray ray) {
         if (refl.dist == INFTY) {
             return res * castRayWithSky(ray);
         }
-        ray = refl.ray;
 
+        vec3 refvector = reflectOrRefract(ray, materials[material], refl.normal);
+        ray = Ray(refl.intersection, refvector, ray.color, ray.opticalDensity, ray.isInside);
         res *= materials[material].color[ray.color];
     }
 
