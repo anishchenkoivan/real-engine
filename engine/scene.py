@@ -12,6 +12,7 @@ class Buffers(Enum):
     SPHERES = 1
     PLANES = 2
     TRIANGLES = 3
+    LENSES = 4
 
 
 class Converter:
@@ -24,6 +25,8 @@ class Converter:
         if isinstance(data, float):
             data = pack('f', data)
             return unpack('i', data)[0]
+        if isinstance(data, bool):
+            return float(data)
 
         raise NotImplementedError()
 
@@ -70,17 +73,22 @@ class Color(Vector):
 
 
 class Material(LoadableObject):
-    def __init__(self, color: Color, refllose: Color, scene_loader):
+    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1):
         super().__init__()
         self.color = color
-        self.refllose = refllose
+        self.roughness = roughness
+        self.transparent = transparent
+        self.optical_density = optical_density
         self.index = scene_loader.new_material_index()
 
     @typing.override
     def as_array(self):
         res = [
-            self.color.red, self.color.green, self.color.blue, None,
-            self.refllose.red, self.refllose.green, self.refllose.blue, None,
+            self.color.red, self.color.green, self.color.blue,
+            self.roughness,
+            self.optical_density,
+            self.transparent,
+            None, None
         ]
         return res
 
@@ -140,6 +148,17 @@ class Triangle(GraphicalPrimitive):
         ]
 
 
+class Lens(GraphicalPrimitive):
+    def __init__(self, sphere: Sphere, plane: Plane, material: Material):
+        super().__init__(material)
+        self.sphere = sphere
+        self.plane = plane
+
+    @typing.override
+    def as_array(self):
+        return self.sphere.as_array() + self.plane.as_array()[:-3] + [self.material_index, None, None]
+
+
 class SkyConfig(typing.NamedTuple):
     sunPosition: Vector
     sunRadius: float
@@ -173,11 +192,13 @@ class SceneLoader(LogicProvider):
         spheres = self.spawn_spheres()
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
+        lenses = self.spawn_lenses()
 
         self.load_SSBO(self.materials, Buffers.MATERIAlS.value)
         self.load_SSBO(spheres, Buffers.SPHERES.value)
         self.load_SSBO(planes, Buffers.PLANES.value)
         self.load_SSBO(triangles, Buffers.TRIANGLES.value)
+        self.load_SSBO(lenses, Buffers.LENSES.value)
 
         self.load_sky_config(self.sky_config())
 
@@ -226,6 +247,9 @@ class SceneLoader(LogicProvider):
         return glm.array(glm.float32)
 
     def spawn_triangles(self):
+        return glm.array(glm.float32)
+
+    def spawn_lenses(self):
         return glm.array(glm.float32)
 
     def sky_config(self):
