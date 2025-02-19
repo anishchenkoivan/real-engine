@@ -317,7 +317,6 @@ float castRay(Ray ray) {
         ray = refl.ray;
 
         res *= materials[material].color[ray.color];
-        // ray.opticalDensity = materials[material].opticalDensity;
     }
 
     return res;
