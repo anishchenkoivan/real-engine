@@ -58,7 +58,6 @@ struct Lens {
     Sphere sphere;
     Plane plane;
     int material;
-    vec3 direction;
 };
 
 #define LAYOUT std430
@@ -125,7 +124,7 @@ vec3 diffusedReflection(vec3 normal, vec3 incidentDir, float roughness, vec3 ray
     return normalize(mix(perfectReflection, randomReflection, roughness));
 }
 
-vec3 advancedReflection(inout Ray ray, Material material, vec3 normal) {
+vec3 reflectOrRefract(inout Ray ray, Material material, vec3 normal) {
     if (material.transparent) {
         if (dot(ray.dir, normal) > 0.0) {
             normal = -normal;
@@ -133,6 +132,9 @@ vec3 advancedReflection(inout Ray ray, Material material, vec3 normal) {
         float theta = ray.opticalDensity / material.opticalDensity;
         if (ray.isInside) {
             theta = 1 / theta;
+            ray.opticalDensity = 1;
+        } else {
+            ray.opticalDensity = material.opticalDensity;
         }
         ray.isInside = !ray.isInside;
         return normalize(refract(ray.dir, normal, theta));
@@ -163,8 +165,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
 
     vec3 intersection = ray.start + ray.dir * t;
 
-    // vec3 refvector = diffusedReflection(normal, ray.dir, materials[plane.material].roughness, ray.start);
-    vec3 refvector = advancedReflection(ray, materials[plane.material], normal);
+    vec3 refvector = reflectOrRefract(ray, materials[plane.material], normal);
     return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
 }
 
@@ -191,15 +192,13 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     if ((v < 0 && abs(v) > EPS) || (u + v > 1 && abs(u + v - 1) > EPS))
         return Reflection(ray, INFTY);
 
-    // At this stage we can compute t to find out where the intersection point is on the line.
     float t = inv_det * dot(edge2, s_cross_e1);
 
     if (t > EPS) // ray intersection
     {
         float dist = length(ray.dir) * t;
         vec3 normal = normalize(cross(edge1, edge2));
-        // vec3 reflection = diffusedReflection(normal, ray.dir, materials[tr.material].roughness, ray.start);
-        vec3 reflection = advancedReflection(ray, materials[tr.material], normal);
+        vec3 reflection = reflectOrRefract(ray, materials[tr.material], normal);
         vec3 intersection = ray.start + ray.dir * t;
         return Reflection(Ray(intersection, reflection, ray.color, ray.opticalDensity, ray.isInside), dist);
     }
@@ -237,8 +236,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    // vec3 refvector = diffusedReflection(rvector, ray.dir, materials[sph.material].roughness, ray.start);
-    vec3 refvector = advancedReflection(ray, materials[sph.material], rvector);
+    vec3 refvector = reflectOrRefract(ray, materials[sph.material], rvector);
     return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
 }
 
@@ -264,12 +262,13 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
     for (int i = 0; i < 2; i++) {
         float ti = (i == 0) ? t1 : t2;
         if (ti < EPS) continue;
+        vec3 lensDirection = vec3(lens.plane.a, lens.plane.b, lens.plane.c);
 
         vec3 candidateIntersection = ray.start + ray.dir * ti;
         vec3 candidateNormal = normalize(candidateIntersection - lens.sphere.centre);
 
         float planeSide = dot(vec3(lens.plane.a, lens.plane.b, lens.plane.c), candidateIntersection) + lens.plane.d;
-        bool validSide = dot(vec3(lens.plane.a, lens.plane.b, lens.plane.c), lens.direction) > 0.0;
+        bool validSide = dot(vec3(lens.plane.a, lens.plane.b, lens.plane.c), lensDirection) > 0.0;
 
         if ((planeSide > 0.0) == validSide) {
             t = ti;
@@ -283,7 +282,7 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
         return Reflection(ray, INFTY);
     }
 
-    vec3 refvector = advancedReflection(ray, materials[lens.material], normal);
+    vec3 refvector = reflectOrRefract(ray, materials[lens.material], normal);
     return Reflection(Ray(intersection, refvector, ray.color, ray.opticalDensity, ray.isInside), t * length(ray.dir));
 }
 
@@ -318,7 +317,7 @@ float castRay(Ray ray) {
         ray = refl.ray;
 
         res *= materials[material].color[ray.color];
-        ray.opticalDensity = materials[material].opticalDensity;
+        // ray.opticalDensity = materials[material].opticalDensity;
     }
 
     return res;

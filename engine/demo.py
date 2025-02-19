@@ -48,13 +48,11 @@ class ExampleSceneLoader(SceneLoader):
                 Sphere(Vector(1.0, 1.0, 20.0), 1.0, self.mt4),
                 Plane(0.0, 0.0, 1.0, -20.0, self.mt4),
                 self.mt4,
-                Vector(0.0, 0.0, 1.0),
             ),
             Lens(
                 Sphere(Vector(1.0, 1.0, 5.0), 1.0, self.mt4),
-                Plane(0.0, 0.0, 1.0, -5.0, self.mt4),
+                Plane(0.0, 0.0, -1.0, 5.0, self.mt4),
                 self.mt4,
-                Vector(0.0, 0.0, -1.0),
             )
         ]
 

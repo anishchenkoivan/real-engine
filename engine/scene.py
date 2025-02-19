@@ -149,15 +149,14 @@ class Triangle(GraphicalPrimitive):
 
 
 class Lens(GraphicalPrimitive):
-    def __init__(self, sphere: Sphere, plane: Plane, material: Material, direction: Vector):
+    def __init__(self, sphere: Sphere, plane: Plane, material: Material):
         super().__init__(material)
         self.sphere = sphere
         self.plane = plane
-        self.direction = direction
 
     @typing.override
     def as_array(self):
-        return self.sphere.as_array() + self.plane.as_array()[:-3] + [self.material_index, None, None] + self.direction.as_array()
+        return self.sphere.as_array() + self.plane.as_array()[:-3] + [self.material_index, None, None]
 
 
 class SkyConfig(typing.NamedTuple):
