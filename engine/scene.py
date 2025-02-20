@@ -5,6 +5,7 @@ from graphics import LogicProvider, ShaderProgram
 from OpenGL.GL import *
 from pyglm import glm
 from struct import pack, unpack
+from simplejpeg import decode_jpeg
 
 
 class Buffers(Enum):
@@ -73,7 +74,7 @@ class Color(Vector):
 
 
 class Material(LoadableObject):
-    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1, dispersion_coefficient: float = 0.01):
+    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density: float = 1, dispersion_coefficient: float = 0.01):
         super().__init__()
         self.color = color
         self.roughness = roughness
@@ -112,7 +113,7 @@ class Sphere(GraphicalPrimitive):
         return [
             self.center.x, self.center.y, self.center.z,
             self.radius, self.material_index,
-            None, None, None # padding
+            None, None, None  # padding
         ]
 
 
@@ -161,13 +162,6 @@ class Lens(GraphicalPrimitive):
         return self.sphere.as_array() + self.plane.as_array()[:-3] + [self.material_index, None, None]
 
 
-class SkyConfig(typing.NamedTuple):
-    sunPosition: Vector
-    sunRadius: float
-    sunColor: Color
-    skyColor: Color
-
-
 class SceneLoader(LogicProvider):
     def __init__(self, shader_program: ShaderProgram):
         super().__init__()
@@ -181,7 +175,7 @@ class SceneLoader(LogicProvider):
     @typing.final
     def render(self):
         if not self.__initialized:
-            self.initialize()
+            self.__initialize()
             self.__initialized = True
 
         super().render()
@@ -190,21 +184,21 @@ class SceneLoader(LogicProvider):
         self.last_material_index += 1
         return self.last_material_index - 1
 
-    def initialize(self):
+    def __initialize(self):
         spheres = self.spawn_spheres()
         planes = self.spawn_planes()
         triangles = self.spawn_triangles()
         lenses = self.spawn_lenses()
 
-        self.load_SSBO(self.materials, Buffers.MATERIAlS.value)
-        self.load_SSBO(spheres, Buffers.SPHERES.value)
-        self.load_SSBO(planes, Buffers.PLANES.value)
-        self.load_SSBO(triangles, Buffers.TRIANGLES.value)
-        self.load_SSBO(lenses, Buffers.LENSES.value)
+        self.__load_SSBO(self.materials, Buffers.MATERIAlS.value)
+        self.__load_SSBO(spheres, Buffers.SPHERES.value)
+        self.__load_SSBO(planes, Buffers.PLANES.value)
+        self.__load_SSBO(triangles, Buffers.TRIANGLES.value)
+        self.__load_SSBO(lenses, Buffers.LENSES.value)
 
-        self.load_sky_config(self.sky_config())
+        self.__load_skybox()
 
-    def load_SSBO(self, data, index):
+    def __load_SSBO(self, data, index):
         if len(data) == 0:
             return
 
@@ -216,16 +210,31 @@ class SceneLoader(LogicProvider):
         glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, size, data.ptr)
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, ssbo)
 
-    def load_sky_config(self, conf: SkyConfig):
-        glUniform3f(glGetUniformLocation(self.shader.program,
-                    "sunPosition"), conf.sunPosition.x, conf.sunPosition.y, conf.sunPosition.z)
-        glUniform1f(glGetUniformLocation(self.shader.program,
-                    "sunRadius"), conf.sunRadius)
+    def __load_skybox(self):
+        texture_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_CUBE_MAP, texture_id)
 
-        glUniform3f(glGetUniformLocation(self.shader.program,
-                                         f"sunColor"), conf.sunColor.red, conf.sunColor.green, conf.sunColor.blue)
-        glUniform3f(glGetUniformLocation(self.shader.program,
-                                         f"skyColor"), conf.skyColor.red, conf.skyColor.green, conf.skyColor.blue)
+        for i, j in enumerate(self.spawn_skybox_textures()):
+            self.__load_skybox_side(i, j)
+
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE)
+
+        glUniform1i(glGetUniformLocation(self.shader.program, "skybox"), 0)
+
+
+    def __load_skybox_side(self, idx, path):
+        with open(path, 'rb') as texture_file:
+            texture_bytes = texture_file.read()
+        texture_data = decode_jpeg(texture_bytes)
+        width, height, _ = texture_data.shape
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + idx,
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, texture_data
+            );
+
 
     @staticmethod
     def to_glm_array(data: list[LoadableObject]):
@@ -254,5 +263,12 @@ class SceneLoader(LogicProvider):
     def spawn_lenses(self):
         return glm.array(glm.float32)
 
-    def sky_config(self):
-        return SkyConfig(Vector(0.4, 0.3, 1.0), 0.05, Color(1.0, 1.0, 0.0), Color(0.67, 0.84, 0.89))
+    def spawn_skybox_textures(self):
+        return [
+            "../media/bluecloud_ft.jpg",
+            "../media/bluecloud_bk.jpg",
+            "../media/bluecloud_up.jpg",
+            "../media/bluecloud_dn.jpg",
+            "../media/bluecloud_rt.jpg",
+            "../media/bluecloud_lf.jpg",
+        ]
