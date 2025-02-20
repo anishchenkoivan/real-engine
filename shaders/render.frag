@@ -6,6 +6,7 @@ uniform mat3 rotationMatrix = mat3(1.0);
 uniform vec3 position = vec3(0.0, 0.0, -1.0);
 uniform float rand1;
 uniform float rand2;
+uniform samplerCube skybox;
 
 vec2 fragCoord = gl_FragCoord.xy;
 
@@ -87,8 +88,6 @@ layout(LAYOUT, binding = 4) buffer LensesBuffer {
 
 uniform vec3 sunPosition;
 uniform float sunRadius;
-uniform vec3 sunColor;
-uniform vec3 skyColor;
 
 struct Reflection {
     vec3 intersection;
@@ -97,7 +96,7 @@ struct Reflection {
 };
 #define NONE_REFLECTION Reflection(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), INFTY)
 
-Reflection new_reflection(Ray ray, vec3 normal, float t) {
+Reflection newReflection(Ray ray, vec3 normal, float t) {
     return Reflection(ray.start + ray.dir * t, normal, length(ray.dir) * t);
 }
 
@@ -153,10 +152,7 @@ vec3 reflectOrRefract(inout Ray ray, Material material, vec3 normal) {
 }
 
 float castRayWithSky(Ray ray) {
-    if (distance(ray.dir, normalize(sunPosition)) < sunRadius) {
-        return sunColor[ray.color];
-    }
-    return skyColor[ray.color];
+    return texture(skybox, ray.dir)[ray.color];
 }
 
 Reflection castRayWithPlane(Ray ray, Plane plane) {
@@ -173,7 +169,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
         return NONE_REFLECTION;
     }
 
-    return new_reflection(ray, normal, t);
+    return newReflection(ray, normal, t);
 }
 
 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -207,7 +203,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     if (t > EPS) // ray intersection
     {
         vec3 normal = normalize(cross(edge1, edge2));
-        return new_reflection(ray, normal, t);
+        return newReflection(ray, normal, t);
     }
     else { // This means that there is a line intersection but not a ray intersection.
         return NONE_REFLECTION;
@@ -244,7 +240,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    return new_reflection(ray, rvector, t);
+    return newReflection(ray, rvector, t);
 }
 
 Reflection castRayWithLens(Ray ray, Lens lens) {
@@ -289,7 +285,7 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
         return NONE_REFLECTION;
     }
 
-    return new_reflection(ray, normal, t);
+    return newReflection(ray, normal, t);
 }
 
 #define PROCESS_PRIMITIVE(primitives, castFunction) \
