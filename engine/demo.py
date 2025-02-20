@@ -9,15 +9,16 @@ class ExampleSceneLoader(SceneLoader):
     def define_materials_list(self):
         self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.02, self)
         self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.02, self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.02, self)
-        self.mt4 = Material(Color(0.8, 0.8, 0.9), 0.0, self, transparent=True, optical_density=1.4, dispersion_coefficient=0.01)
-        return [self.mt1, self.mt2, self.mt3, self.mt4]
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.2, self)
+        self.mt4 = Material(Color(0.8, 0.8, 0.9), 0.0, self, transparent=True,
+                            optical_density=1.4, dispersion_coefficient=0.01)
+        self.light = Material(Color(1.0, 1.0, 1.0), 0.0, self, light=True)
 
     @typing.override
     def spawn_spheres(self):
         return [
-            Sphere(Vector(-2.0, 1.0, 13.0), 1.5, self.mt1),
-            Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.mt2),
+            Sphere(Vector(1.0, -1.2, 13.0), 1.25, self.light),
+            Sphere(Vector(-2.0, -1.0, -13.0), 1.5, self.light)
         ]
 
     @typing.override
@@ -56,3 +57,12 @@ class ExampleSceneLoader(SceneLoader):
             )
         ]
 
+    @typing.override
+    def spawn_lights(self):
+        return [
+            Light(Color(1.0, 1.0, 1.0), Vector(-2.0, 1.0, 13.0))
+        ]
+
+    # @typing.override
+    # def sky_config(self):
+    #     return SkyConfig(Vector(1.0, 1.0, 1.0), 0.0, Color(0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0))

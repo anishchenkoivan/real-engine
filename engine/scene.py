@@ -13,6 +13,7 @@ class Buffers(Enum):
     PLANES = 2
     TRIANGLES = 3
     LENSES = 4
+    LIGHTS = 5
 
 
 class Converter:
@@ -73,14 +74,20 @@ class Color(Vector):
 
 
 class Material(LoadableObject):
-    def __init__(self, color: Color, roughness: float, scene_loader, transparent: bool = False, optical_density : float = 1, dispersion_coefficient: float = 0.01):
+    def __init__(self, color: Color, roughness: float, scene_loader,
+                 transparent: bool = False, optical_density: float = 1,
+                 dispersion_coefficient: float = 0.01, light: bool = False):
         super().__init__()
         self.color = color
         self.roughness = roughness
         self.transparent = transparent
         self.optical_density = optical_density
         self.dispersion_coefficient = dispersion_coefficient
+        self.light = light
+
         self.index = scene_loader.new_material_index()
+        scene_loader.materials.append(self)
+        scene_loader.materials = sorted(scene_loader.materials, key=lambda mat: mat.index)
 
     @typing.override
     def as_array(self):
@@ -90,7 +97,7 @@ class Material(LoadableObject):
             self.optical_density,
             self.transparent,
             self.dispersion_coefficient,
-            None
+            self.light,
         ]
         return res
 
@@ -112,7 +119,7 @@ class Sphere(GraphicalPrimitive):
         return [
             self.center.x, self.center.y, self.center.z,
             self.radius, self.material_index,
-            None, None, None # padding
+            None, None, None  # padding
         ]
 
 
@@ -161,6 +168,20 @@ class Lens(GraphicalPrimitive):
         return self.sphere.as_array() + self.plane.as_array()[:-3] + [self.material_index, None, None]
 
 
+class Light(LoadableObject):
+    def __init__(self, color: Color, position: Vector):
+        super().__init__()
+        self.color = color
+        self.posit = position
+
+    @typing.override
+    def as_array(self):
+        return [
+            self.color.x, self.color.y, self.color.z, None,
+            self.posit.x, self.posit.y, self.posit.z, None
+        ]
+
+
 class SkyConfig(typing.NamedTuple):
     sunPosition: Vector
     sunRadius: float
@@ -175,8 +196,9 @@ class SceneLoader(LogicProvider):
         self.__initialized = False
 
         self.last_material_index = 0
-        materials = self.define_materials_list()
-        self.materials = sorted(materials, key=lambda mat: mat.index)
+
+        self.materials = []
+        self.define_materials_list()
 
     @typing.final
     def render(self):
@@ -252,6 +274,9 @@ class SceneLoader(LogicProvider):
         return glm.array(glm.float32)
 
     def spawn_lenses(self):
+        return glm.array(glm.float32)
+
+    def spawn_lights(self):
         return glm.array(glm.float32)
 
     def sky_config(self):

@@ -32,6 +32,7 @@ struct Material {
     float opticalDensity;
     bool transparent;
     float dispersionCoefficient;
+    bool light;
 };
 
 struct Sphere {
@@ -63,6 +64,11 @@ struct Lens {
     int material;
 };
 
+struct Light {
+    vec3 color;
+    vec3 position;
+};
+
 #define LAYOUT std430
 
 layout(LAYOUT, binding = 0) buffer MaterialsBuffer {
@@ -85,6 +91,10 @@ layout(LAYOUT, binding = 4) buffer LensesBuffer {
     Lens lenses[];
 };
 
+layout(LAYOUT, binding = 5) buffer LightsBuffer {
+    Light lights[];
+};
+
 uniform vec3 sunPosition;
 uniform float sunRadius;
 uniform vec3 sunColor;
@@ -97,7 +107,7 @@ struct Reflection {
 };
 #define NONE_REFLECTION Reflection(vec3(0.0, 0.0, 0.0), vec3(0.0, 0.0, 0.0), INFTY)
 
-Reflection new_reflection(Ray ray, vec3 normal, float t) {
+Reflection newReflection(Ray ray, vec3 normal, float t) {
     return Reflection(ray.start + ray.dir * t, normal, length(ray.dir) * t);
 }
 
@@ -173,7 +183,7 @@ Reflection castRayWithPlane(Ray ray, Plane plane) {
         return NONE_REFLECTION;
     }
 
-    return new_reflection(ray, normal, t);
+    return newReflection(ray, normal, t);
 }
 
 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
@@ -207,7 +217,7 @@ Reflection castRayWithTriangle(Ray ray, Triangle tr) {
     if (t > EPS) // ray intersection
     {
         vec3 normal = normalize(cross(edge1, edge2));
-        return new_reflection(ray, normal, t);
+        return newReflection(ray, normal, t);
     }
     else { // This means that there is a line intersection but not a ray intersection.
         return NONE_REFLECTION;
@@ -244,7 +254,7 @@ Reflection castRayWithSphere(Ray ray, Sphere sph) {
 
     vec3 intersection = ray.start + ray.dir * t;
     vec3 rvector = normalize(intersection - sph.centre);
-    return new_reflection(ray, rvector, t);
+    return newReflection(ray, rvector, t);
 }
 
 Reflection castRayWithLens(Ray ray, Lens lens) {
@@ -289,7 +299,13 @@ Reflection castRayWithLens(Ray ray, Lens lens) {
         return NONE_REFLECTION;
     }
 
-    return new_reflection(ray, normal, t);
+    return newReflection(ray, normal, t);
+}
+
+float addAmbientLight(vec3 pos, vec3 normal, int color) {
+    for (int i = 0; i < lights.length(); ++i) {
+        return abs(dot(normalize(normal), normalize(pos - lights[i].position))) * lights[i].color[color];
+    }
 }
 
 #define PROCESS_PRIMITIVE(primitives, castFunction) \
@@ -320,9 +336,14 @@ float castRay(Ray ray) {
             return res * castRayWithSky(ray);
         }
 
+        // if (materials[material].light) {
+        //     return res * materials[material].color[ray.color];
+        // }
+
         vec3 refvector = reflectOrRefract(ray, materials[material], refl.normal);
         ray = Ray(refl.intersection, refvector, ray.color, ray.opticalDensity, ray.isInside);
-        res *= materials[material].color[ray.color];
+        res *= materials[material].color[ray.color] * addAmbientLight(refl.intersection, refl.normal, ray.color);
+        res = addAmbientLight(refl.intersection, refl.normal, ray.color);
     }
 
     return res;
