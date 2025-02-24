@@ -146,6 +146,15 @@ vec3 reflectOrRefract(inout Ray ray, Material material, vec3 normal) {
             ray.opticalDensity = material.opticalDensity;
         }
         ray.isInside = !ray.isInside;
+
+        // Total internal reflection
+        float cosThetaI = -dot(ray.dir, normal);
+        float sin2ThetaT = theta * theta * (1.0 - cosThetaI * cosThetaI);
+        if (sin2ThetaT > 0.8) {
+            return normalize(reflect(ray.dir, normal));
+        }
+
+        // Normal refraction
         return normalize(refract(ray.dir, normal, theta));
     }
     return diffusedReflection(normal, ray.dir, material.roughness, ray.start);
