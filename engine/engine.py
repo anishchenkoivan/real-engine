@@ -7,6 +7,9 @@ import config
 import platform
 import os
 
+import numpy as np
+from OpenGL import GL
+
 
 class Engine:
     def __init__(self):
@@ -35,6 +38,13 @@ class Engine:
     def run(self, renderer: Renderer):
         clock = pygame.time.Clock()
 
+        # Острожно, говнокод!
+        # А я пошел спать
+        prev_frame_ssbo = GL.glGenBuffers(1)
+        GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, prev_frame_ssbo)
+        GL.glBufferData(GL.GL_SHADER_STORAGE_BUFFER, self.resolution[0] * self.resolution[1] * 4 * 4, None, GL.GL_DYNAMIC_DRAW)  # Allocate memory
+        GL.glBindBufferBase(GL.GL_SHADER_STORAGE_BUFFER, 5, prev_frame_ssbo)
+
         while True:
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -44,6 +54,10 @@ class Engine:
                     self.handle_pygame_events(event)
             if self.movement_event_handler is not None and any(pygame.key.get_pressed()):
                 self.movement_event_handler.handle_keydown_event()
+
+            # Это тут тоже не надо оставлять
+            GL.glBindBuffer(GL.GL_SHADER_STORAGE_BUFFER, prev_frame_ssbo)
+            GL.glMemoryBarrier(GL.GL_SHADER_STORAGE_BARRIER_BIT)  # Ensure synchronization
 
             renderer.render()
             pygame.display.flip()
