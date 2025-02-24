@@ -81,7 +81,9 @@ class Material(LoadableObject):
         self.transparent = transparent
         self.optical_density = optical_density
         self.dispersion_coefficient = dispersion_coefficient
+
         self.index = scene_loader.new_material_index()
+        scene_loader.materials.append(self)
 
     @typing.override
     def as_array(self):
@@ -169,8 +171,8 @@ class SceneLoader(LogicProvider):
         self.__initialized = False
 
         self.last_material_index = 0
-        materials = self.define_materials_list()
-        self.materials = sorted(materials, key=lambda mat: mat.index)
+        self.materials = []
+        self.define_materials_list()
 
     @typing.final
     def render(self):
