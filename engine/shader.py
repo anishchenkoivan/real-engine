@@ -81,8 +81,9 @@ class MovementEventHandlerWrapper(MovementEventHandler):
 
     @override
     def handle_keydown_event(self):
-        self.event_handler.handle_keydown_event()
+        self.event_handler.handle_mouse_event(event)
         self.logic_provider.drop_mixed_frames()
+
 
 class VerticesMesh(Mesh):
     def __init__(self, attribute: np.array):
