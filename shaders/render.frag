@@ -35,6 +35,7 @@ struct Material {
     float opticalDensity;
     bool transparent;
     float dispersionCoefficient;
+    bool is_light;
 };
 
 struct Sphere {
@@ -322,9 +323,14 @@ float castRay(Ray ray) {
             return res * castRayWithSky(ray);
         }
 
+        res *= materials[material].color[ray.color];
+
+        if (materials[material].is_light) {
+            return res;
+        }
+
         vec3 refvector = reflectOrRefract(ray, materials[material], refl.normal);
         ray = Ray(refl.intersection, refvector, ray.color, ray.opticalDensity, ray.isInside);
-        res *= materials[material].color[ray.color];
     }
 
     return res;
