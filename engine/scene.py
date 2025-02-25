@@ -1,19 +1,11 @@
 import typing
-from enum import Enum
+from buffers import Buffers
 from graphics import LogicProvider, ShaderProgram
 
 from OpenGL.GL import *
 from pyglm import glm
 from struct import pack, unpack
 from simplejpeg import decode_jpeg
-
-
-class Buffers(Enum):
-    MATERIAlS = 0
-    SPHERES = 1
-    PLANES = 2
-    TRIANGLES = 3
-    LENSES = 4
 
 
 class Converter:

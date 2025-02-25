@@ -71,7 +71,10 @@ class Renderer:
     def render(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self.shader.use()
-        self.logic_provider.render()
+
+        if self.logic_provider is not None:
+            self.logic_provider.render()
+
         self.mesh.draw()
 
 

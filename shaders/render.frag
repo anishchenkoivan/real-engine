@@ -17,6 +17,8 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
+uniform float blending_alpha = 0.0;
+
 const float colorDispersionFactor[3] = float[3](-0.2, 1.0, 0.2);
 
 struct Ray {
@@ -84,6 +86,10 @@ layout(LAYOUT, binding = 3) buffer TrianglesBuffer {
 
 layout(LAYOUT, binding = 4) buffer LensesBuffer {
     Lens lenses[];
+};
+
+layout(std430, binding = 5) buffer FrameBuffer {
+    vec4 prevFrameData[];
 };
 
 uniform vec3 sunPosition;
@@ -348,5 +354,10 @@ void main() {
     vec3 camera = position;
     vec3 dir = normalize(vec3(uv, 1.0));
     dir = rotationMatrix * dir;
-    color = getColor(camera, dir);
+    vec4 newColor = getColor(camera, dir);
+    ivec2 pixelCoord = ivec2(gl_FragCoord.xy);
+    int index = pixelCoord.y * int(resolution.x) + pixelCoord.x;
+    vec4 oldColor = prevFrameData[index];
+    color = mix(newColor, oldColor, blending_alpha);
+    prevFrameData[index] = color;
 }
