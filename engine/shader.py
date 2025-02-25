@@ -81,7 +81,7 @@ class MovementEventHandlerWrapper(MovementEventHandler):
 
     @override
     def handle_keydown_event(self):
-        self.event_handler.handle_mouse_event(event)
+        self.event_handler.handle_mouse_event()
         self.logic_provider.drop_mixed_frames()
 
 
