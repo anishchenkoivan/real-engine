@@ -83,7 +83,7 @@ class Material(LoadableObject):
         self.dispersion_coefficient = dispersion_coefficient
 
         self.index = scene_loader.new_material_index()
-        scene_loader.materials.append(self)
+        scene_loader.new_material(self)
 
     @typing.override
     def as_array(self):
@@ -185,6 +185,9 @@ class SceneLoader(LogicProvider):
     def new_material_index(self):
         self.last_material_index += 1
         return self.last_material_index - 1
+
+    def new_material(self, material):
+        self.materials.append(material)
 
     def __initialize(self):
         spheres = self.spawn_spheres()
