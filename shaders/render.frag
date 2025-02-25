@@ -17,7 +17,7 @@ vec2 fragCoord = gl_FragCoord.xy;
 #define COLOR_GREEN 1
 #define COLOR_BLUE  2
 
-#define blending_alpha 0.7
+uniform float blending_alpha = 0.0;
 
 const float colorDispersionFactor[3] = float[3](-0.2, 1.0, 0.2);
 

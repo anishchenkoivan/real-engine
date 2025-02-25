@@ -9,7 +9,7 @@ class ExampleSceneLoader(SceneLoader):
     def define_materials_list(self):
         self.mt1 = Material(Color(0.9, 0.0, 0.0), 0.02, self)
         self.mt2 = Material(Color(0.9, 0.9, 0.9), 0.02, self)
-        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.02, self)
+        self.mt3 = Material(Color(0.4, 0.4, 0.4), 0.52, self)
         self.mt4 = Material(Color(0.8, 0.8, 0.9), 0.0, self, transparent=True, optical_density=1.4, dispersion_coefficient=0.01)
         self.mt5 = Material(Color(0.9, 0.9, 0.9), 0.0, self)
         self.mt6 = Material(Color(0.1, 0.8, 0.1), 0.0, self)
