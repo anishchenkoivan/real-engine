@@ -30,14 +30,14 @@ Activate venv and run
 
 ## Features
 
-    - Gpu acceleration
-    - Transparrent materials
-    - Rough materials
-    - Light dispertion and chromatic aberration
-    - Sampling (reduces noise by calculating mean color of all frames since last move for each pixel)
-    - Sky texture
+- Gpu acceleration
+- Transparrent materials
+- Rough materials
+- Light dispertion and chromatic aberration
+- Sampling (reduces noise by calculating mean color of all frames since last move for each pixel)
+- Sky texture
 
 PoC only
 
-    - Blender 3d models support
-    - Light sources
+- Blender 3d models support
+- Light sources
