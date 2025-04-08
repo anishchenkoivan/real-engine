@@ -25,7 +25,6 @@ struct Ray {
     vec3 start;
     vec3 dir;
     int color;
-    float opticalDensity;
     bool isInside;
 };
 
@@ -143,16 +142,19 @@ vec3 reflectOrRefract(inout Ray ray, Material material, vec3 normal) {
         if (dot(ray.dir, normal) > 0.0) {
             normal = -normal;
         }
-        float colorMaterialOpticalDensity = material.opticalDensity + material.dispersionCoefficient * colorDispersionFactor[ray.color];
-        float theta = ray.opticalDensity / colorMaterialOpticalDensity;
+        float materialOpticalDensity = material.opticalDensity + material.dispersionCoefficient * colorDispersionFactor[ray.color];
+        float theta = 1.0 / materialOpticalDensity;
         if (ray.isInside) {
-            theta = 1 / theta;
-            ray.opticalDensity = 1;
-        } else {
-            ray.opticalDensity = material.opticalDensity;
+            theta = 1.0 / theta;
         }
+        vec3 refr = refract(ray.dir, normal, theta);
+
+        if (refr == vec3(0.0)) {
+            return reflect(ray.dir, normal);
+        }
+
         ray.isInside = !ray.isInside;
-        return normalize(refract(ray.dir, normal, theta));
+        return refr;
     }
     return diffusedReflection(normal, ray.dir, material.roughness, ray.start);
 }
@@ -323,7 +325,7 @@ float castRay(Ray ray) {
         }
 
         vec3 refvector = reflectOrRefract(ray, materials[material], refl.normal);
-        ray = Ray(refl.intersection, refvector, ray.color, ray.opticalDensity, ray.isInside);
+        ray = Ray(refl.intersection, refvector, ray.color, ray.isInside);
         res *= materials[material].color[ray.color];
     }
 
@@ -335,7 +337,7 @@ float castRay(Ray ray) {
 vec4 getColor(vec3 camera, vec3 dir) {
     vec4 res = vec4(0.0, 0.0, 0.0, 1.0);
 
-    Ray ray = Ray(camera, dir, COLOR_RED, 1.0, false);
+    Ray ray = Ray(camera, dir, COLOR_RED, false);
     res.x = castRay(ray);
 
     ray.color = COLOR_GREEN;
