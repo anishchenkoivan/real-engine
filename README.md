@@ -47,5 +47,6 @@ PoC only
 ![rough floor](assets/rough-floor.jpg)
 ![rough floor](assets/rough-floor2.jpg)
 ![rough floor](assets/transparrent-spheres.jpg)
+![rough floor](assets/transparrent-spheres2.jpg)
 ![rough floor](assets/rough-spheres.jpg)
 ![rough floor](assets/light.jpg)
